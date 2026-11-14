@@ -163,6 +163,13 @@ p2pgps-protocol/
   [Testing](wiki/Testing.md) / [Troubleshooting](wiki/Troubleshooting.md) /
   [FAQ](wiki/FAQ.md)
 
+## Wiki
+
+`wiki/` に GitHub Wiki 用の Markdown を用意しています。GitHub の仕様で Wiki の初回ページだけは手動作成が必要です。
+
+1. https://github.com/haruki0420/p2pgps-protocol/wiki を開き「Create the first page」→ そのまま Save。
+2. `./scripts/publish-wiki.sh` を実行すると `wiki/*.md` が Wiki に同期されます。
+
 ## 既知の制約
 
 - 実機 BLE（CoreBluetooth / Android BLE）での動作検証は未実施です。CI はプロトコル層の

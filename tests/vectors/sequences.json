@@ -1,0 +1,275 @@
+{
+  "schema": "p2pgps-protocol/test-vectors/sequence@1",
+  "kind": "sequence",
+  "source": "spec/protocol-v1.md §3.3-6, §10",
+  "scenarios": [
+    {
+      "id": "sequence-consecutive",
+      "description": "連続した sequence（10, 11, 12）",
+      "packets": [
+        {
+          "wire": {
+            "version": 1,
+            "flags": 1,
+            "sequence": 10,
+            "latitude": 356812360,
+            "longitude": 1397671250,
+            "altitude_m": 0,
+            "accuracy_m": 255,
+            "speed_mps": 255,
+            "timestamp": 1763136000
+          },
+          "hex": "01010a004886441552c54e530000ffff00521769"
+        },
+        {
+          "wire": {
+            "version": 1,
+            "flags": 1,
+            "sequence": 11,
+            "latitude": 356812360,
+            "longitude": 1397671250,
+            "altitude_m": 0,
+            "accuracy_m": 255,
+            "speed_mps": 255,
+            "timestamp": 1763136001
+          },
+          "hex": "01010b004886441552c54e530000ffff01521769"
+        },
+        {
+          "wire": {
+            "version": 1,
+            "flags": 1,
+            "sequence": 12,
+            "latitude": 356812360,
+            "longitude": 1397671250,
+            "altitude_m": 0,
+            "accuracy_m": 255,
+            "speed_mps": 255,
+            "timestamp": 1763136002
+          },
+          "hex": "01010c004886441552c54e530000ffff02521769"
+        }
+      ],
+      "expect": {
+        "accepted": [
+          true,
+          true,
+          true
+        ],
+        "sequence_status": [
+          "first",
+          "ok",
+          "ok"
+        ]
+      }
+    },
+    {
+      "id": "sequence-regression",
+      "description": "sequence 巻き戻り（100 → 99）。ログ対象だがパケットは受理",
+      "packets": [
+        {
+          "wire": {
+            "version": 1,
+            "flags": 1,
+            "sequence": 100,
+            "latitude": 356812360,
+            "longitude": 1397671250,
+            "altitude_m": 0,
+            "accuracy_m": 255,
+            "speed_mps": 255,
+            "timestamp": 1763136000
+          },
+          "hex": "010164004886441552c54e530000ffff00521769"
+        },
+        {
+          "wire": {
+            "version": 1,
+            "flags": 1,
+            "sequence": 99,
+            "latitude": 356812360,
+            "longitude": 1397671250,
+            "altitude_m": 0,
+            "accuracy_m": 255,
+            "speed_mps": 255,
+            "timestamp": 1763136001
+          },
+          "hex": "010163004886441552c54e530000ffff01521769"
+        }
+      ],
+      "expect": {
+        "accepted": [
+          true,
+          true
+        ],
+        "sequence_status": [
+          "first",
+          "regression"
+        ]
+      }
+    },
+    {
+      "id": "sequence-duplicate",
+      "description": "sequence 重複（100 → 100）",
+      "packets": [
+        {
+          "wire": {
+            "version": 1,
+            "flags": 1,
+            "sequence": 100,
+            "latitude": 356812360,
+            "longitude": 1397671250,
+            "altitude_m": 0,
+            "accuracy_m": 255,
+            "speed_mps": 255,
+            "timestamp": 1763136000
+          },
+          "hex": "010164004886441552c54e530000ffff00521769"
+        },
+        {
+          "wire": {
+            "version": 1,
+            "flags": 1,
+            "sequence": 100,
+            "latitude": 356812360,
+            "longitude": 1397671250,
+            "altitude_m": 0,
+            "accuracy_m": 255,
+            "speed_mps": 255,
+            "timestamp": 1763136001
+          },
+          "hex": "010164004886441552c54e530000ffff01521769"
+        }
+      ],
+      "expect": {
+        "accepted": [
+          true,
+          true
+        ],
+        "sequence_status": [
+          "first",
+          "duplicate"
+        ]
+      }
+    },
+    {
+      "id": "sequence-gap",
+      "description": "sequence 欠番（100 → 105）",
+      "packets": [
+        {
+          "wire": {
+            "version": 1,
+            "flags": 1,
+            "sequence": 100,
+            "latitude": 356812360,
+            "longitude": 1397671250,
+            "altitude_m": 0,
+            "accuracy_m": 255,
+            "speed_mps": 255,
+            "timestamp": 1763136000
+          },
+          "hex": "010164004886441552c54e530000ffff00521769"
+        },
+        {
+          "wire": {
+            "version": 1,
+            "flags": 1,
+            "sequence": 105,
+            "latitude": 356812360,
+            "longitude": 1397671250,
+            "altitude_m": 0,
+            "accuracy_m": 255,
+            "speed_mps": 255,
+            "timestamp": 1763136001
+          },
+          "hex": "010169004886441552c54e530000ffff01521769"
+        }
+      ],
+      "expect": {
+        "accepted": [
+          true,
+          true
+        ],
+        "sequence_status": [
+          "first",
+          "gap"
+        ]
+      }
+    },
+    {
+      "id": "sequence-wrap",
+      "description": "uint16 ラップ（65534 → 65535 → 0 → 1）",
+      "packets": [
+        {
+          "wire": {
+            "version": 1,
+            "flags": 1,
+            "sequence": 65534,
+            "latitude": 356812360,
+            "longitude": 1397671250,
+            "altitude_m": 0,
+            "accuracy_m": 255,
+            "speed_mps": 255,
+            "timestamp": 1763136000
+          },
+          "hex": "0101feff4886441552c54e530000ffff00521769"
+        },
+        {
+          "wire": {
+            "version": 1,
+            "flags": 1,
+            "sequence": 65535,
+            "latitude": 356812360,
+            "longitude": 1397671250,
+            "altitude_m": 0,
+            "accuracy_m": 255,
+            "speed_mps": 255,
+            "timestamp": 1763136001
+          },
+          "hex": "0101ffff4886441552c54e530000ffff01521769"
+        },
+        {
+          "wire": {
+            "version": 1,
+            "flags": 1,
+            "sequence": 0,
+            "latitude": 356812360,
+            "longitude": 1397671250,
+            "altitude_m": 0,
+            "accuracy_m": 255,
+            "speed_mps": 255,
+            "timestamp": 1763136002
+          },
+          "hex": "010100004886441552c54e530000ffff02521769"
+        },
+        {
+          "wire": {
+            "version": 1,
+            "flags": 1,
+            "sequence": 1,
+            "latitude": 356812360,
+            "longitude": 1397671250,
+            "altitude_m": 0,
+            "accuracy_m": 255,
+            "speed_mps": 255,
+            "timestamp": 1763136003
+          },
+          "hex": "010101004886441552c54e530000ffff03521769"
+        }
+      ],
+      "expect": {
+        "accepted": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "sequence_status": [
+          "first",
+          "ok",
+          "ok",
+          "ok"
+        ]
+      }
+    }
+  ]
+}

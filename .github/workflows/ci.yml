@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: pytest (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+        python-version:
+          - "3.12"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package (editable + test extra)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Run pytest
+        run: python -m pytest -q
+
+      - name: CLI smoke test (encode / decode / vectors)
+        run: |
+          python -m p2pgps encode --lat 35.6812360 --lon 139.7671250 --flags 3 --seq 42 --alt 3 --acc 5 --speed 0 --ts 1763136000
+          python -m p2pgps decode --hex 01032a004886441552c54e530300050000521769
+          python -m p2pgps vectors

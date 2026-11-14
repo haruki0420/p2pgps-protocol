@@ -1,0 +1,97 @@
+{
+  "schema": "p2pgps-protocol/test-vectors/extended@1",
+  "kind": "extended",
+  "source": "spec/protocol-v1.md §4, §10",
+  "vectors": [
+    {
+      "id": "extended-gps",
+      "description": "GPS 測位（battery 87%, 12 衛星, course 123.45°）",
+      "wire": {
+        "version": 1,
+        "provider": 1,
+        "battery_pct": 87,
+        "satellites": 12,
+        "course": 12345,
+        "vertical_accuracy_m": 5,
+        "reserved": 0
+      },
+      "hex": "0101570c39300500",
+      "expect": {
+        "valid": true,
+        "reason": null
+      }
+    },
+    {
+      "id": "extended-unknown",
+      "description": "すべて不明値（provider=0, battery/satellites/vacc=255, course=65535）",
+      "wire": {
+        "version": 1,
+        "provider": 0,
+        "battery_pct": 255,
+        "satellites": 255,
+        "course": 65535,
+        "vertical_accuracy_m": 255,
+        "reserved": 0
+      },
+      "hex": "0100ffffffffff00",
+      "expect": {
+        "valid": true,
+        "reason": null
+      }
+    },
+    {
+      "id": "extended-manual-simulated",
+      "description": "手動 / シミュレート位置（provider=4, battery 100%, 衛星 0）",
+      "wire": {
+        "version": 1,
+        "provider": 4,
+        "battery_pct": 100,
+        "satellites": 0,
+        "course": 0,
+        "vertical_accuracy_m": 0,
+        "reserved": 0
+      },
+      "hex": "0104640000000000",
+      "expect": {
+        "valid": true,
+        "reason": null
+      }
+    },
+    {
+      "id": "extended-network-low-battery",
+      "description": "ネットワーク測位・低バッテリー（provider=2, battery 18%, course 359.99°）",
+      "wire": {
+        "version": 1,
+        "provider": 2,
+        "battery_pct": 18,
+        "satellites": 4,
+        "course": 35999,
+        "vertical_accuracy_m": 30,
+        "reserved": 0
+      },
+      "hex": "010212049f8c1e00",
+      "expect": {
+        "valid": true,
+        "reason": null
+      }
+    },
+    {
+      "id": "extended-unknown-version",
+      "description": "未知バージョン（version=0x02 = 破棄）",
+      "wire": {
+        "version": 2,
+        "provider": 1,
+        "battery_pct": 50,
+        "satellites": 8,
+        "course": 9000,
+        "vertical_accuracy_m": 10,
+        "reserved": 0
+      },
+      "hex": "0201320828230a00",
+      "expect": {
+        "valid": false,
+        "reason": "unknown_version"
+      }
+    }
+  ]
+}

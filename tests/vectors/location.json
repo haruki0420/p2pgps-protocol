@@ -1,0 +1,327 @@
+{
+  "schema": "p2pgps-protocol/test-vectors/location@1",
+  "kind": "location",
+  "source": "spec/protocol-v1.md §3, §3.3, §10",
+  "notes": "wire はワイヤ値（lat/lon は度×10^7）。hex は 20 bytes の期待値。",
+  "vectors": [
+    {
+      "id": "tokyo-station",
+      "description": "東京駅（有効 fix、altitude/speed 有効、flags=0x07）",
+      "wire": {
+        "version": 1,
+        "flags": 7,
+        "sequence": 42,
+        "latitude": 356812360,
+        "longitude": 1397671250,
+        "altitude_m": 3,
+        "accuracy_m": 5,
+        "speed_mps": 12,
+        "timestamp": 1763136000
+      },
+      "degrees": {
+        "latitude": "35.6812360",
+        "longitude": "139.7671250"
+      },
+      "hex": "01072a004886441552c54e530300050c00521769",
+      "expect": {
+        "valid": true,
+        "reason": null,
+        "valid_fix": true
+      }
+    },
+    {
+      "id": "tokyo-station-spec-3-2",
+      "description": "仕様 §3.2 のエンコード例（flags=0x03 = VALID_FIX|ALTITUDE_VALID、speed 無効）",
+      "wire": {
+        "version": 1,
+        "flags": 3,
+        "sequence": 42,
+        "latitude": 356812360,
+        "longitude": 1397671250,
+        "altitude_m": 3,
+        "accuracy_m": 5,
+        "speed_mps": 0,
+        "timestamp": 1763136000
+      },
+      "degrees": {
+        "latitude": "35.6812360",
+        "longitude": "139.7671250"
+      },
+      "hex": "01032a004886441552c54e530300050000521769",
+      "expect": {
+        "valid": true,
+        "reason": null,
+        "valid_fix": true
+      }
+    },
+    {
+      "id": "antarctic",
+      "description": "南極点（負の緯度・経度、altitude 負）",
+      "wire": {
+        "version": 1,
+        "flags": 7,
+        "sequence": 7,
+        "latitude": -899999999,
+        "longitude": -1799999999,
+        "altitude_m": -2800,
+        "accuracy_m": 20,
+        "speed_mps": 1,
+        "timestamp": 1763136123
+      },
+      "degrees": {
+        "latitude": "-89.9999999",
+        "longitude": "-179.9999999"
+      },
+      "hex": "0107070001175bca012eb69410f514017b521769",
+      "expect": {
+        "valid": true,
+        "reason": null,
+        "valid_fix": true
+      }
+    },
+    {
+      "id": "null-island",
+      "description": "Null Island (0,0)（VALID_FIX=1 のため無効扱い）",
+      "wire": {
+        "version": 1,
+        "flags": 1,
+        "sequence": 1,
+        "latitude": 0,
+        "longitude": 0,
+        "altitude_m": 0,
+        "accuracy_m": 255,
+        "speed_mps": 255,
+        "timestamp": 1763136000
+      },
+      "degrees": {
+        "latitude": "0.0000000",
+        "longitude": "0.0000000"
+      },
+      "hex": "0101010000000000000000000000ffff00521769",
+      "expect": {
+        "valid": false,
+        "reason": "null_island",
+        "valid_fix": true
+      }
+    },
+    {
+      "id": "null-island-near-boundary",
+      "description": "Null Island 近傍（±0.0001° の内側 = 無効）",
+      "wire": {
+        "version": 1,
+        "flags": 1,
+        "sequence": 2,
+        "latitude": 500,
+        "longitude": -500,
+        "altitude_m": 0,
+        "accuracy_m": 255,
+        "speed_mps": 255,
+        "timestamp": 1763136001
+      },
+      "degrees": {
+        "latitude": "0.0000500",
+        "longitude": "-0.0000500"
+      },
+      "hex": "01010200f40100000cfeffff0000ffff01521769",
+      "expect": {
+        "valid": false,
+        "reason": "null_island",
+        "valid_fix": true
+      }
+    },
+    {
+      "id": "null-island-outside-boundary",
+      "description": "Null Island 近傍の外側（±0.0001° を超える = 有効）",
+      "wire": {
+        "version": 1,
+        "flags": 1,
+        "sequence": 3,
+        "latitude": 2000,
+        "longitude": 2000,
+        "altitude_m": 0,
+        "accuracy_m": 255,
+        "speed_mps": 255,
+        "timestamp": 1763136002
+      },
+      "degrees": {
+        "latitude": "0.0002000",
+        "longitude": "0.0002000"
+      },
+      "hex": "01010300d0070000d00700000000ffff02521769",
+      "expect": {
+        "valid": true,
+        "reason": null,
+        "valid_fix": true
+      }
+    },
+    {
+      "id": "out-of-range-latitude",
+      "description": "範囲外緯度（90° 超 = 破棄）",
+      "wire": {
+        "version": 1,
+        "flags": 1,
+        "sequence": 4,
+        "latitude": 900000001,
+        "longitude": 1390000000,
+        "altitude_m": 0,
+        "accuracy_m": 255,
+        "speed_mps": 255,
+        "timestamp": 1763136003
+      },
+      "degrees": {
+        "latitude": "90.0000001",
+        "longitude": "139.0000000"
+      },
+      "hex": "0101040001e9a43580b7d9520000ffff03521769",
+      "expect": {
+        "valid": false,
+        "reason": "latitude_out_of_range",
+        "valid_fix": true
+      }
+    },
+    {
+      "id": "out-of-range-longitude",
+      "description": "範囲外経度（-180° 未満 = 破棄）",
+      "wire": {
+        "version": 1,
+        "flags": 1,
+        "sequence": 5,
+        "latitude": 350000000,
+        "longitude": -1800000001,
+        "altitude_m": 0,
+        "accuracy_m": 255,
+        "speed_mps": 255,
+        "timestamp": 1763136004
+      },
+      "degrees": {
+        "latitude": "35.0000000",
+        "longitude": "-180.0000001"
+      },
+      "hex": "010105008093dc14ff2db6940000ffff04521769",
+      "expect": {
+        "valid": false,
+        "reason": "longitude_out_of_range",
+        "valid_fix": true
+      }
+    },
+    {
+      "id": "unknown-version",
+      "description": "未知バージョン（version=0x02 = 破棄）",
+      "wire": {
+        "version": 2,
+        "flags": 1,
+        "sequence": 6,
+        "latitude": 356812360,
+        "longitude": 1397671250,
+        "altitude_m": 0,
+        "accuracy_m": 255,
+        "speed_mps": 255,
+        "timestamp": 1763136005
+      },
+      "degrees": null,
+      "hex": "020106004886441552c54e530000ffff05521769",
+      "expect": {
+        "valid": false,
+        "reason": "unknown_version",
+        "valid_fix": true
+      }
+    },
+    {
+      "id": "reserved-flag-set",
+      "description": "予約ビット（bit7）が立っている = 破棄",
+      "wire": {
+        "version": 1,
+        "flags": 129,
+        "sequence": 8,
+        "latitude": 356812360,
+        "longitude": 1397671250,
+        "altitude_m": 0,
+        "accuracy_m": 255,
+        "speed_mps": 255,
+        "timestamp": 1763136006
+      },
+      "degrees": null,
+      "hex": "018108004886441552c54e530000ffff06521769",
+      "expect": {
+        "valid": false,
+        "reason": "reserved_flag_set",
+        "valid_fix": true
+      }
+    },
+    {
+      "id": "no-fix",
+      "description": "未測位（VALID_FIX=0、lat/lon=0。Null Island 扱いにはしない）",
+      "wire": {
+        "version": 1,
+        "flags": 0,
+        "sequence": 9,
+        "latitude": 0,
+        "longitude": 0,
+        "altitude_m": 0,
+        "accuracy_m": 255,
+        "speed_mps": 255,
+        "timestamp": 1763136007
+      },
+      "degrees": {
+        "latitude": "0.0000000",
+        "longitude": "0.0000000"
+      },
+      "hex": "0100090000000000000000000000ffff07521769",
+      "expect": {
+        "valid": true,
+        "reason": null,
+        "valid_fix": false
+      }
+    },
+    {
+      "id": "boundary-max",
+      "description": "境界値（lat=+90°, lon=+180°, alt=int16 min, ts=uint32 max, seq=65535）",
+      "wire": {
+        "version": 1,
+        "flags": 7,
+        "sequence": 65535,
+        "latitude": 900000000,
+        "longitude": 1800000000,
+        "altitude_m": -32768,
+        "accuracy_m": 255,
+        "speed_mps": 255,
+        "timestamp": 4294967295
+      },
+      "degrees": {
+        "latitude": "90.0000000",
+        "longitude": "180.0000000"
+      },
+      "hex": "0107ffff00e9a43500d2496b0080ffffffffffff",
+      "expect": {
+        "valid": true,
+        "reason": null,
+        "valid_fix": true
+      }
+    },
+    {
+      "id": "boundary-min",
+      "description": "境界値（lat=-90°, lon=-180°, alt=int16 max, ts=0, seq=0）",
+      "wire": {
+        "version": 1,
+        "flags": 7,
+        "sequence": 0,
+        "latitude": -900000000,
+        "longitude": -1800000000,
+        "altitude_m": 32767,
+        "accuracy_m": 0,
+        "speed_mps": 0,
+        "timestamp": 0
+      },
+      "degrees": {
+        "latitude": "-90.0000000",
+        "longitude": "-180.0000000"
+      },
+      "hex": "0107000000175bca002eb694ff7f000000000000",
+      "expect": {
+        "valid": true,
+        "reason": null,
+        "valid_fix": true
+      }
+    }
+  ]
+}

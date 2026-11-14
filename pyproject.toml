@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "p2pgps-protocol"
+version = "1.0.0"
+description = "P2P GPS BLE protocol v1: canonical spec, Python reference implementation, and shared test vectors"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+  { name = "haruki0420", email = "haruki0420@users.noreply.github.com" },
+]
+keywords = [
+  "ble",
+  "bluetooth-low-energy",
+  "gatt",
+  "gps",
+  "location",
+  "protocol",
+  "p2p",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: System :: Networking",
+  "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+# BLE 実機での送受信シミュレータ用（任意）。
+# bleak = BLE セントラル（受信側シミュレータ）、bless = BLE ペリフェラル（送信側シミュレータ）。
+ble = [
+  "bleak>=0.22",
+  "bless>=0.2",
+]
+test = [
+  "pytest>=8.0",
+]
+
+[project.scripts]
+p2pgps = "p2pgps.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/haruki0420/p2pgps-protocol"
+Documentation = "https://github.com/haruki0420/p2pgps-protocol/blob/main/spec/protocol-v1.md"
+Repository = "https://github.com/haruki0420/p2pgps-protocol"
+Issues = "https://github.com/haruki0420/p2pgps-protocol/issues"
+"Project hub" = "https://github.com/haruki0420/p2pgps-protocol/wiki"
+
+[tool.setuptools]
+packages = ["p2pgps"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

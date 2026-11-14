@@ -1,0 +1,97 @@
+{
+  "schema": "p2pgps-protocol/test-vectors/status@1",
+  "kind": "status",
+  "source": "spec/protocol-v1.md §6",
+  "vectors": [
+    {
+      "id": "status-idle",
+      "description": "Idle（未接続・未開始、battery 不明）",
+      "wire": {
+        "version": 1,
+        "state": 0,
+        "interval_ms": 1000,
+        "battery_pct": 255,
+        "status_flags": 0,
+        "last_error": 0,
+        "reserved": 0
+      },
+      "hex": "0100e803ff000000",
+      "expect": {
+        "valid": true,
+        "reason": null
+      }
+    },
+    {
+      "id": "status-streaming",
+      "description": "Streaming（interval 1000ms、battery 80%、extended 有効 + fix あり）",
+      "wire": {
+        "version": 1,
+        "state": 1,
+        "interval_ms": 1000,
+        "battery_pct": 80,
+        "status_flags": 3,
+        "last_error": 0,
+        "reserved": 0
+      },
+      "hex": "0101e80350030000",
+      "expect": {
+        "valid": true,
+        "reason": null
+      }
+    },
+    {
+      "id": "status-error-location-unavailable",
+      "description": "Error（測位不可、interval 500ms、低バッテリー）",
+      "wire": {
+        "version": 1,
+        "state": 3,
+        "interval_ms": 500,
+        "battery_pct": 20,
+        "status_flags": 8,
+        "last_error": 3,
+        "reserved": 0
+      },
+      "hex": "0103f40114080300",
+      "expect": {
+        "valid": true,
+        "reason": null
+      }
+    },
+    {
+      "id": "status-charging-heartbeat",
+      "description": "ハートビート（Streaming、充電中、extended 有効、interval 2000ms）",
+      "wire": {
+        "version": 1,
+        "state": 1,
+        "interval_ms": 2000,
+        "battery_pct": 100,
+        "status_flags": 5,
+        "last_error": 0,
+        "reserved": 0
+      },
+      "hex": "0101d00764050000",
+      "expect": {
+        "valid": true,
+        "reason": null
+      }
+    },
+    {
+      "id": "status-unknown-version",
+      "description": "未知バージョン（version=0x02 = 破棄）",
+      "wire": {
+        "version": 2,
+        "state": 0,
+        "interval_ms": 1000,
+        "battery_pct": 255,
+        "status_flags": 0,
+        "last_error": 0,
+        "reserved": 0
+      },
+      "hex": "0200e803ff000000",
+      "expect": {
+        "valid": false,
+        "reason": "unknown_version"
+      }
+    }
+  ]
+}

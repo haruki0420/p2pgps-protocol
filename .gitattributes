@@ -1,0 +1,11 @@
+# 改行コードを LF に統一する（Windows ランナーでもテストが安定するように）
+* text=auto eol=lf
+
+# バイナリ
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary

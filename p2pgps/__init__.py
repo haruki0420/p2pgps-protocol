@@ -1,0 +1,132 @@
+"""P2P GPS BLE protocol v1 — Python リファレンス実装。
+
+正本仕様: ``spec/protocol-v1.md``（このリポジトリ）。
+テストベクタ: ``tests/vectors/*.json``（iOS / Android と共有）。
+
+>>> from p2pgps import LocationPacket, Flags
+>>> packet = LocationPacket.from_degrees(
+...     "35.6812360", "139.7671250",
+...     flags=int(Flags.VALID_FIX | Flags.ALTITUDE_VALID),
+...     sequence=42, altitude_m=3, accuracy_m=5, speed_mps=0,
+...     timestamp=1763136000,
+... )
+>>> packet.encode().hex()
+'01032a004886441552c54e530300050000521769'
+"""
+
+from __future__ import annotations
+
+from .filter import (
+    DEFAULT_MAX_SPEED_MPS,
+    STALE_WINDOW_SECONDS,
+    FilterDecision,
+    FixFilter,
+    SequenceStatus,
+    SequenceTracker,
+    haversine_m,
+    is_stale,
+)
+from .protocol import (
+    CCCD_UUID,
+    CONTROL_CHARACTERISTIC_UUID,
+    DEFAULT_INTERVAL_MS,
+    DEVICE_INFORMATION_SERVICE_UUID,
+    EXTENDED_CHARACTERISTIC_UUID,
+    EXTENDED_PACKET_SIZE,
+    FIRMWARE_REVISION_UUID,
+    LOCATION_CHARACTERISTIC_UUID,
+    LOCATION_PACKET_SIZE,
+    LOCATION_SCALE,
+    LONGITUDE_MAX_E7,
+    LATITUDE_MAX_E7,
+    MANUFACTURER_NAME_UUID,
+    MAX_INTERVAL_MS,
+    MIN_INTERVAL_MS,
+    MODEL_NUMBER_UUID,
+    NULL_ISLAND_E7,
+    PROTOCOL_VERSION,
+    SERVICE_UUID,
+    STATUS_CHARACTERISTIC_UUID,
+    STATUS_PACKET_SIZE,
+    ControlCommand,
+    ControlLengthError,
+    ExtendedPacket,
+    Flags,
+    LastError,
+    LocationPacket,
+    Opcode,
+    PacketLengthError,
+    ProtocolError,
+    Provider,
+    RejectReason,
+    State,
+    Status,
+    StatusFlags,
+    UnknownOpcodeError,
+    ValidationError,
+    decode_packet,
+    from_hex,
+    to_hex,
+    uuid_from_le_bytes,
+    uuid_to_le_bytes,
+)
+
+__version__ = "1.0.0"
+__protocol_version__ = PROTOCOL_VERSION
+
+__all__ = [
+    "__version__",
+    "__protocol_version__",
+    # protocol
+    "PROTOCOL_VERSION",
+    "LOCATION_PACKET_SIZE",
+    "EXTENDED_PACKET_SIZE",
+    "STATUS_PACKET_SIZE",
+    "LOCATION_SCALE",
+    "LATITUDE_MAX_E7",
+    "LONGITUDE_MAX_E7",
+    "NULL_ISLAND_E7",
+    "DEFAULT_INTERVAL_MS",
+    "MIN_INTERVAL_MS",
+    "MAX_INTERVAL_MS",
+    "SERVICE_UUID",
+    "LOCATION_CHARACTERISTIC_UUID",
+    "CONTROL_CHARACTERISTIC_UUID",
+    "STATUS_CHARACTERISTIC_UUID",
+    "EXTENDED_CHARACTERISTIC_UUID",
+    "DEVICE_INFORMATION_SERVICE_UUID",
+    "MANUFACTURER_NAME_UUID",
+    "MODEL_NUMBER_UUID",
+    "FIRMWARE_REVISION_UUID",
+    "CCCD_UUID",
+    "Flags",
+    "Provider",
+    "Opcode",
+    "State",
+    "StatusFlags",
+    "LastError",
+    "RejectReason",
+    "ProtocolError",
+    "PacketLengthError",
+    "ValidationError",
+    "UnknownOpcodeError",
+    "ControlLengthError",
+    "LocationPacket",
+    "ExtendedPacket",
+    "ControlCommand",
+    "Status",
+    "to_hex",
+    "from_hex",
+    "decode_packet",
+    "uuid_to_le_bytes",
+    "uuid_from_le_bytes",
+    # filter
+    "STALE_WINDOW_SECONDS",
+    "DEFAULT_MAX_SPEED_MPS",
+    "SequenceStatus",
+    "SequenceTracker",
+    "is_stale",
+    "haversine_m",
+    "FilterDecision",
+    "FixFilter",
+]

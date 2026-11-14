@@ -26,6 +26,7 @@
 - **L-19**: macOS は未検証であることを明記（CI は Linux / Windows）。
 - **L-23**: `docs/integration.md` の Kotlin パスを実際の構成に修正。
 - **L-22**: `serve` の bless シミュレータが Control write を受信しないことを明記。
+- **R-4**: `RESET` は既定設定に戻すが、**ストリーミング状態は変更しない**ことを仕様 §5 に明記（iOS / Android の挙動を統一）。
 - テストを 179 → 200 に拡充（§5.1 境界値、no-fix、NaN/inf、CLI 異常系）。
 
 ### Fixed

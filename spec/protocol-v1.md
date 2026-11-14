@@ -206,7 +206,7 @@ packet = 01 03 2A 00 48 86 44 15 52 C5 4E 53 03 00 05 00 00 52 17 69
 | `0x03` | `SET_INTERVAL` | uint16 LE `interval_ms` | 送信間隔の変更（ストリーミング中でも可）。正規化は §5.1 |
 | `0x04` | `REQUEST_FIX` | なし | 次回 notify を即時送信（1 回） |
 | `0x05` | `SET_EXTENDED` | uint8 `enabled` (0/1) | Extended Location の notify 有効化 |
-| `0x7F` | `RESET` | なし | 既定設定に戻す（interval=1000, extended=off, sequence=0） |
+| `0x7F` | `RESET` | なし | 既定設定に戻す（interval=1000, extended=off, sequence=0）。**ストリーミング状態は変更しない** |
 
 ### 5.1 `interval_ms` の正規化（v1.0.1 で明確化）
 

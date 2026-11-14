@@ -116,17 +116,18 @@ from p2pgps import FixFilter
 
 filter_ = FixFilter()
 decision = filter_.feed(decoded)
-if decision.accepted:
+if decision.injectable:  # accepted かつ VALID_FIX=1
     print("stale:", decision.stale, "sequence:", decision.sequence_status)
 ```
 
 ## テスト
 
 ```bash
-python -m pytest -q     # 179 passed（Linux / macOS / Windows）
+python -m pytest -q     # 200 passed（CI: Linux / Windows。macOS は未検証）
 ```
 
-- テストベクタ: [`tests/vectors/*.json`](tests/vectors)（iOS / Android と共有）
+- テストベクタ: [`tests/vectors/*.json`](tests/vectors)（3 実装の共通契約データ。
+  現状は手動ミラーで、自動同期は Roadmap）
 - テスト構成と CI: [`docs/testing.md`](docs/testing.md)
 - CI: ubuntu-latest + windows-latest / Python 3.12 / `pip install -e ".[test]"` + `pytest -q`
 
@@ -134,15 +135,15 @@ python -m pytest -q     # 179 passed（Linux / macOS / Windows）
 
 ```
 p2pgps-protocol/
-├── spec/protocol-v1.md      # 正本仕様（v1 フリーズ）
+├── spec/protocol-v1.md      # 正本仕様（v1.0.1）
 ├── p2pgps/                  # Python リファレンス実装（標準ライブラリのみ）
 │   ├── protocol.py          # UUID・パケット encode/decode/validate
-│   ├── filter.py            # 範囲検証・stale・外れ値除去・sequence 監視
+│   ├── filter.py            # 範囲検証・no-fix・stale・外れ値除去・sequence 監視
 │   ├── vectors.py           # テストベクタのローダ / 検証
 │   └── cli.py               # python -m p2pgps
 ├── tests/
 │   ├── vectors/*.json       # 共有テストベクタ（機械可読）
-│   └── test_*.py            # pytest（179 tests）
+│   └── test_*.py            # pytest（200 tests）
 ├── docs/                    # architecture / testing / integration
 ├── wiki/                    # GitHub Wiki 用 Markdown
 ├── .github/workflows/ci.yml # CI（Ubuntu + Windows）

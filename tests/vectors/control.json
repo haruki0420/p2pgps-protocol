@@ -1,46 +1,80 @@
 {
   "schema": "p2pgps-protocol/test-vectors/control@1",
   "kind": "control",
-  "source": "spec/protocol-v1.md §5, §10",
-  "notes": "command は受信側が書き込む値。hex は 1〜3 bytes の期待値。",
+  "source": "spec/protocol-v1.md §5, §5.1, §10",
+  "notes": "command は受信側が書き込む値。hex は生値の 1〜3 bytes。normalized_interval_ms は送信側が適用する値（仕様 §5.1）。",
   "vectors": [
     {
       "id": "control-start-default",
-      "description": "START interval_ms=0（既定値 1000 として送信される）",
+      "description": "START interval_ms=0（生値 0。送信側は既定値 1000 を適用）",
       "command": {
         "opcode": "START",
         "interval_ms": 0
       },
-      "hex": "01e803",
+      "hex": "010000",
       "expect": {
         "valid": true,
         "decoded": {
           "opcode": "START",
-          "interval_ms": 1000,
+          "interval_ms": 0,
           "normalized_interval_ms": 1000
         }
       }
     },
     {
-      "id": "control-start-1000",
-      "description": "START interval_ms=1000",
+      "id": "control-start-1",
+      "description": "START interval_ms=1（生値 1。下限 100 にクランプ）",
       "command": {
         "opcode": "START",
-        "interval_ms": 1000
+        "interval_ms": 1
       },
-      "hex": "01e803",
+      "hex": "010100",
       "expect": {
         "valid": true,
         "decoded": {
           "opcode": "START",
-          "interval_ms": 1000,
-          "normalized_interval_ms": 1000
+          "interval_ms": 1,
+          "normalized_interval_ms": 100
         }
       }
     },
     {
-      "id": "control-start-min",
-      "description": "START interval_ms=100（下限）",
+      "id": "control-start-50",
+      "description": "START interval_ms=50（生値 50。下限 100 にクランプ）",
+      "command": {
+        "opcode": "START",
+        "interval_ms": 50
+      },
+      "hex": "013200",
+      "expect": {
+        "valid": true,
+        "decoded": {
+          "opcode": "START",
+          "interval_ms": 50,
+          "normalized_interval_ms": 100
+        }
+      }
+    },
+    {
+      "id": "control-start-99",
+      "description": "START interval_ms=99（生値 99。下限 100 にクランプ）",
+      "command": {
+        "opcode": "START",
+        "interval_ms": 99
+      },
+      "hex": "016300",
+      "expect": {
+        "valid": true,
+        "decoded": {
+          "opcode": "START",
+          "interval_ms": 99,
+          "normalized_interval_ms": 100
+        }
+      }
+    },
+    {
+      "id": "control-start-100",
+      "description": "START interval_ms=100（下限。そのまま適用）",
       "command": {
         "opcode": "START",
         "interval_ms": 100
@@ -56,8 +90,25 @@
       }
     },
     {
-      "id": "control-start-max",
-      "description": "START interval_ms=60000（上限）",
+      "id": "control-start-1000",
+      "description": "START interval_ms=1000（そのまま適用）",
+      "command": {
+        "opcode": "START",
+        "interval_ms": 1000
+      },
+      "hex": "01e803",
+      "expect": {
+        "valid": true,
+        "decoded": {
+          "opcode": "START",
+          "interval_ms": 1000,
+          "normalized_interval_ms": 1000
+        }
+      }
+    },
+    {
+      "id": "control-start-60000",
+      "description": "START interval_ms=60000（上限。そのまま適用）",
       "command": {
         "opcode": "START",
         "interval_ms": 60000
@@ -73,36 +124,36 @@
       }
     },
     {
-      "id": "control-start-too-small",
-      "description": "START interval_ms=50（範囲外 → 既定値 1000 にクランプして送信）",
-      "command": {
-        "opcode": "START",
-        "interval_ms": 50
-      },
-      "hex": "01e803",
-      "expect": {
-        "valid": true,
-        "decoded": {
-          "opcode": "START",
-          "interval_ms": 1000,
-          "normalized_interval_ms": 1000
-        }
-      }
-    },
-    {
-      "id": "control-start-too-large",
-      "description": "START interval_ms=60001（範囲外 → 既定値 1000 にクランプして送信）",
+      "id": "control-start-60001",
+      "description": "START interval_ms=60001（生値 60001。上限 60000 にクランプ）",
       "command": {
         "opcode": "START",
         "interval_ms": 60001
       },
-      "hex": "01e803",
+      "hex": "0161ea",
       "expect": {
         "valid": true,
         "decoded": {
           "opcode": "START",
-          "interval_ms": 1000,
-          "normalized_interval_ms": 1000
+          "interval_ms": 60001,
+          "normalized_interval_ms": 60000
+        }
+      }
+    },
+    {
+      "id": "control-start-65535",
+      "description": "START interval_ms=65535（生値 uint16 max。上限 60000 にクランプ）",
+      "command": {
+        "opcode": "START",
+        "interval_ms": 65535
+      },
+      "hex": "01ffff",
+      "expect": {
+        "valid": true,
+        "decoded": {
+          "opcode": "START",
+          "interval_ms": 65535,
+          "normalized_interval_ms": 60000
         }
       }
     },
@@ -122,7 +173,7 @@
     },
     {
       "id": "control-set-interval",
-      "description": "SET_INTERVAL interval_ms=500",
+      "description": "SET_INTERVAL interval_ms=500（そのまま適用）",
       "command": {
         "opcode": "SET_INTERVAL",
         "interval_ms": 500
@@ -134,6 +185,40 @@
           "opcode": "SET_INTERVAL",
           "interval_ms": 500,
           "normalized_interval_ms": 500
+        }
+      }
+    },
+    {
+      "id": "control-set-interval-0",
+      "description": "SET_INTERVAL interval_ms=0（生値 0。既定値 1000 を適用）",
+      "command": {
+        "opcode": "SET_INTERVAL",
+        "interval_ms": 0
+      },
+      "hex": "030000",
+      "expect": {
+        "valid": true,
+        "decoded": {
+          "opcode": "SET_INTERVAL",
+          "interval_ms": 0,
+          "normalized_interval_ms": 1000
+        }
+      }
+    },
+    {
+      "id": "control-set-interval-60001",
+      "description": "SET_INTERVAL interval_ms=60001（生値 60001。上限 60000 にクランプ）",
+      "command": {
+        "opcode": "SET_INTERVAL",
+        "interval_ms": 60001
+      },
+      "hex": "0361ea",
+      "expect": {
+        "valid": true,
+        "decoded": {
+          "opcode": "SET_INTERVAL",
+          "interval_ms": 60001,
+          "normalized_interval_ms": 60000
         }
       }
     },

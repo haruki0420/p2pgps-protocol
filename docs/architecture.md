@@ -22,7 +22,9 @@
 
 - **正本（single source of truth）** は `spec/protocol-v1.md`。数値・バイト配置・
   opcode・flags はこの文書の表が規範。
-- **共有テストベクタ** は `tests/vectors/*.json`。3 実装が同じ JSON を読む。
+- **共有テストベクタ** は `tests/vectors/*.json`。3 実装の**共通契約データ**だが、
+  現状は各実装が同じカテゴリ・同じ値を手動でミラーしている（JSON を直接読む
+  自動同期は未実装。Roadmap 参照）。
 - Python 実装は「仕様の実行可能な解釈」であり、ベクタ生成・検証・受信側
   シミュレータの基盤でもある。
 
@@ -47,7 +49,7 @@ p2pgps/
 │   ├── SequenceTracker  (first/ok/gap/duplicate/regression、uint16 ラップ対応)
 │   ├── is_stale         (±24 時間)
 │   ├── haversine_m      (外れ値判定用の距離)
-│   └── FixFilter        (検証 → sequence → 精度 → 外れ値 → stale)
+│   └── FixFilter        (検証 → sequence → no-fix → 精度 → 外れ値 → stale)
 ├── vectors.py     # tests/vectors/*.json のローダと検証（CLI `vectors` の実体）
 └── cli.py         # encode / decode / vectors / serve / scan
 ```
@@ -90,10 +92,11 @@ LocationPacket
    │ validate()                ← 仕様 §3.3: version / reserved / 範囲 / Null Island
    │   └─ 不正 → ValidationError(reason)
    ▼
-FixFilter.feed()               ← sequence 監視 / 精度ゲート / 外れ値 / stale
+FixFilter.feed()               ← sequence 監視 / no-fix / 精度ゲート / 外れ値 / stale
    │
    ├─ accepted=False → 破棄（reason をログ / Status.last_error へ）
-   └─ accepted=True  → 地図表示・位置注入（stale は警告のみ）
+   │    - 未測位（VALID_FIX=0）は reason="no_fix"（注入不可・基準点を更新しない）
+   └─ accepted=True かつ injectable=True → 地図表示・位置注入（stale は警告のみ）
 ```
 
 **パースと検証を分離**している理由:
@@ -112,8 +115,8 @@ FixFilter.feed()               ← sequence 監視 / 精度ゲート / 外れ値
 | dataclass + `slots=True` | フィールド名を仕様の表と一致させ、JSON ベクタとそのまま相互変換 |
 | `Enum` は int 値（`IntEnum` / `IntFlag`） | ワイヤ値と直接対応。`Flags.VALID_FIX` などの名前をコードで使える |
 | `RejectReason` は `str` Enum + `__str__` | JSON の `expect.reason` とそのまま比較できる |
-| テストベクタを JSON で管理 | Swift / Kotlin / Python が同じデータを読める。実装の出力をベクタにしない（独立検算を必須とする） |
-| 仕様書と定数の整合性テスト | `spec/protocol-v1.md` の UUID・opcode・§3.2 例・§3.3 レンジが実装からずれたら CI で検出 |
+| テストベクタを JSON で管理 | 3 実装の共通契約データ。現状は手動ミラーで、自動同期は Roadmap。実装の出力をベクタにしない（独立検算を必須とする） |
+| 仕様書と定数の整合性テスト | `spec/protocol-v1.md` の UUID・opcode・§3.2 例・§3.3 レンジ・§5.1 interval 正規化が実装からずれたら CI で検出 |
 | BLE バックエンドを差し替え可能に | `serve` は bless、`scan` は bleak。未インストール時は stdout / 明確なエラーにフォールバックし、CI を BLE 依存にしない |
 
 ## 5. エラーマッピング
@@ -135,6 +138,16 @@ FixFilter.feed()               ← sequence 監視 / 精度ゲート / 外れ値
 - Control の `AUTH` opcode（`0x10`）は v2 の HMAC / ペアリングコード用に予約済み。
 - Location flags の bit7、Extended の `reserved`、未使用 opcode は後方互換の追加に使う。
 - 破壊的変更は UUID を変えず `version=0x02` で表現し、受信側は両対応する。
+
+## 6.1 Roadmap（未実装・既知の課題）
+
+- **共有ベクタの自動同期**: Android / iOS のテストが `tests/vectors/*.json` を
+  直接読む仕組みは未実装。現状は手動ミラーのため、実装間の乖離検出は
+  `tests/test_spec_consistency.py` とレビューの範囲。CI で `p2pgps-protocol` を
+  checkout して JSON を読む方式を検討中。
+- **`serve` の Control write 受信**: bless シミュレータは Location / Status の
+  notify のみ。Control characteristic の write 受信は未実装（`scan --connect` は
+  実機向け）。
 
 ## 7. 既知の制約
 

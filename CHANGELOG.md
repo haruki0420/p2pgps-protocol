@@ -4,6 +4,39 @@
 [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に準拠し、
 バージョンは [Semantic Versioning](https://semver.org/lang/ja/) に従います。
 
+## [1.0.1] - 2026-11-15
+
+レビュー指摘（C-1 / C-2 / C-3d / C-4 / L-19〜L-25）への対応。仕様は v1.0.1。
+
+### Changed
+
+- **C-1**: 仕様 §5.1 を追加し、Control `interval_ms` の正規化を**境界クランプ方式**に
+  明確化（`0` → 1000、`1`–`99` → 100、`100`–`60000` → そのまま、
+  `60001`–`65535` → 60000）。`ControlCommand.encode()` は**生値**を書き、
+  `normalize_interval_ms()` を明示的に呼ぶ形に変更。Status の `interval_ms` は
+  正規化後の値。
+- **C-1**: `tests/vectors/control.json` を生値 `hex` + `normalized_interval_ms` に
+  更新（22 ベクタ。0/1/50/99/100/1000/60000/60001/65535 の境界を網羅）。
+- **C-2**: `FixFilter` は未測位（`VALID_FIX=0`）を `accepted=False` /
+  `reason="no_fix"` とし、外れ値判定の基準点（`last_fix`）を更新しない。
+  `FilterDecision.injectable` を追加（表示可・注入不可を表現）。
+- **C-4 / L-25**: テストベクタの説明を実態に合わせて訂正
+  （3 実装が同じ JSON を読むのではなく、同じカテゴリ・値を手動でミラー。
+  自動同期は Roadmap）。
+- **L-19**: macOS は未検証であることを明記（CI は Linux / Windows）。
+- **L-23**: `docs/integration.md` の Kotlin パスを実際の構成に修正。
+- **L-22**: `serve` の bless シミュレータが Control write を受信しないことを明記。
+- テストを 179 → 200 に拡充（§5.1 境界値、no-fix、NaN/inf、CLI 異常系）。
+
+### Fixed
+
+- **C-3d**: `protocol.py` の docstring から存在しない「付録 B」への参照を削除。
+- **L-20**: `START` / `SET_INTERVAL` の `interval_ms=None` は例外（必須 payload）。
+- **L-21**: `degrees_to_e7()` が NaN / inf を `ProtocolError` にする
+  （CLI の traceback を解消）。
+- ドキュメント内の「範囲外 → 1000」記述を §5.1 の境界クランプに統一
+  （`docs/integration.md` / `wiki/FAQ.md` / `wiki/Protocol.md` ほか）。
+
 ## [1.0.0] - 2026-11-15
 
 プロトコル v1 の正本仕様・Python リファレンス実装・共有テストベクタの初回リリース。

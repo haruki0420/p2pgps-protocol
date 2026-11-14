@@ -65,13 +65,16 @@ from .protocol import (
     UnknownOpcodeError,
     ValidationError,
     decode_packet,
+    degrees_to_e7,
+    e7_to_degrees,
     from_hex,
+    normalize_interval_ms,
     to_hex,
     uuid_from_le_bytes,
     uuid_to_le_bytes,
 )
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __protocol_version__ = PROTOCOL_VERSION
 
 __all__ = [
@@ -118,6 +121,9 @@ __all__ = [
     "to_hex",
     "from_hex",
     "decode_packet",
+    "normalize_interval_ms",
+    "degrees_to_e7",
+    "e7_to_degrees",
     "uuid_to_le_bytes",
     "uuid_from_le_bytes",
     # filter

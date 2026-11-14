@@ -17,7 +17,7 @@ python -m pytest -q          # conftest.py が sys.path を補正する
 python -m p2pgps vectors
 ```
 
-現在のテスト数: **179**（Linux / macOS / Windows で同一結果）。
+現在のテスト数: **200**（CI は Linux / Windows。macOS は未検証）。
 
 ## 2. テスト構成
 
@@ -25,16 +25,18 @@ python -m p2pgps vectors
 | :--- | :--- |
 | `tests/test_protocol.py` | 定数・UUID・フィールドオフセット・エンディアン・境界値・roundtrip・例外・度変換・Control 全 opcode・Status・Extended |
 | `tests/test_vectors.py` | `tests/vectors/*.json` の全ベクタ（encode / decode / validate / 度変換 / sequence シナリオ）と仕様 §10 の網羅性 |
-| `tests/test_filter.py` | sequence の first/ok/gap/duplicate/regression/ラップ、stale（±24h）、haversine、外れ値除去、精度ゲート |
+| `tests/test_filter.py` | sequence の first/ok/gap/duplicate/regression/ラップ、stale（±24h）、haversine、no-fix の棄却、外れ値除去、精度ゲート |
 | `tests/test_cli.py` | `python -m p2pgps` を subprocess で起動し、encode / decode / vectors / serve / scan の挙動と終了コードを検証 |
-| `tests/test_spec_consistency.py` | 正本仕様（`spec/protocol-v1.md`）と実装定数の整合性。UUID・opcode・flags・§3.2 の例・§3.3 レンジ・シーケンス図 |
+| `tests/test_spec_consistency.py` | 正本仕様（`spec/protocol-v1.md`）と実装定数の整合性。UUID・opcode・flags・§3.2 の例・§3.3 レンジ・§5.1 interval 正規化・シーケンス図 |
 | `tests/conftest.py` | ベクタ読み込みフィクスチャ（UTF-8 固定） |
 | `conftest.py`（ルート） | `sys.path` 補正（editable install なしでも pytest が通るように） |
 
 ## 3. テストベクタ
 
-`tests/vectors/*.json` が共有契約データ。スキーマ・各ファイルの内容・
+`tests/vectors/*.json` が 3 実装の共通契約データ。スキーマ・各ファイルの内容・
 Swift / Kotlin からの読み方は [`tests/vectors/README.md`](../tests/vectors/README.md) を参照。
+現状は各実装が同じカテゴリ・同じ値を手動でミラーしており、JSON を直接読む自動同期は
+未実装（Roadmap。`docs/architecture.md` §6.1）。
 
 仕様 §10 の要求との対応:
 
@@ -54,15 +56,20 @@ Swift / Kotlin からの読み方は [`tests/vectors/README.md`](../tests/vector
 | sequence 重複・欠番・ラップ | `sequence-duplicate`, `sequence-gap`, `sequence-wrap` | `sequences.json` |
 | Extended（battery/provider/course） | `extended-gps`, `extended-unknown`, `extended-manual-simulated`, `extended-network-low-battery` | `extended.json` |
 | Control 各 opcode | `control-start-*`, `control-stop`, `control-set-interval`, `control-request-fix`, `control-set-extended-*`, `control-reset` | `control.json` |
+| Control interval 境界（§5.1） | `control-start-default`（0）, `control-start-1`, `control-start-99`, `control-start-100`, `control-start-60000`, `control-start-60001`, `control-start-65535` | `control.json` |
 | Control 異常系 | `control-unknown-opcode-*`, `control-bad-length-*` | `control.json` |
 | Status | `status-idle`, `status-streaming`, `status-error-*`, `status-charging-heartbeat` | `status.json` |
+
+ベクタ数: location 13 / extended 5 / control 22 / status 5 / sequence 5 シナリオ =
+**50 ベクタ**。`python -m p2pgps vectors` で 50/50 passed になることを確認する。
 
 ### 期待 hex の検算
 
 ベクタの `hex` は実装の出力をそのままコピーせず、**独立実装で検算**する。
-開発時は Node.js の `DataView` による独立エンコーダで全 61 アサーションを照合した
-（`tools/` の一時スクリプト。リポジトリには含めない）。CI では
-`tests/test_spec_consistency.py` が仕様書の例示 hex と実装の一致を検査する。
+v1.0.1 では Node.js の `DataView` / 手組みリトルエンディアンによる独立エンコーダで
+全 50 ベクタ（Control は生値 hex と §5.1 正規化値）の **70 アサーション**を照合した
+（一時スクリプト。リポジトリには含めない）。CI では
+`tests/test_spec_consistency.py` が仕様書の例示 hex・§5.1 表と実装の一致を検査する。
 
 ## 4. CI
 
@@ -79,6 +86,9 @@ Swift / Kotlin からの読み方は [`tests/vectors/README.md`](../tests/vector
 BLE の optional extra（`bleak` / `bless`）は CI ではインストールしない。
 `serve` は stdout バックエンド、`scan` は「bleak 未インストール」エラーの
 テストのみを行う（実機依存を CI から排除）。
+
+`serve` の bless バックエンドは Location / Status の notify のみで、Control
+characteristic の write 受信は未実装（`scan --connect` は実機向け）。
 
 ## 5. クロスプラットフォームの注意
 
@@ -116,6 +126,7 @@ BLE の optional extra（`bleak` / `bless`）は CI ではインストールし�
 | §3.3 検証 | `test_valid_packet_passes_validation`, Null Island / 範囲外 / 未知バージョン / 予約ビット |
 | §4 Extended | `test_extended_*`, `extended.json` |
 | §5 Control | `test_control_*`, `control.json` |
+| §5.1 interval 正規化 | `test_normalize_interval_ms`, `test_control_encode`, `test_spec_interval_normalization_matches_implementation` |
 | §6 Status | `test_status_*`, `status.json` |
 | §7 シーケンス | `test_spec_contains_sequence_diagram`, CLI `serve` / `scan` |
 | §8 セキュリティ | 仕様整合テスト（`test_spec_contains_*`）とドキュメント |

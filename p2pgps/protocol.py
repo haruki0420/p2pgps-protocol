@@ -13,9 +13,6 @@
   判定する（パースと検証を分離することで、不正パケットの診断・テストを可能にする）。
 * 例外は :class:`ProtocolError` 系に統一し、受信側の ``Status.last_error`` に
   対応付けられる :attr:`ValidationError.reason` を持つ。
-
-正本仕様との既知の記載不一致（仕様 §3.2 の例示 hex）については
-``spec/protocol-v1.md`` の付録 B を参照。実装は §3 のフィールド定義を正とする。
 """
 
 from __future__ import annotations
@@ -387,9 +384,14 @@ def degrees_to_e7(value: str | float | Decimal) -> int:
     0.5 は 0 から遠ざかる方向に丸める（``ROUND_HALF_UP``）。仕様 §3 の例
     ``35.6812360 -> 356812360`` を厳密に再現するため、float は ``str()`` を
     経由して 10 進化する（2 進誤差を持ち込まない）。
+
+    NaN / 無限大は :class:`ProtocolError`（CLI が traceback を出さないように）。
     """
-    dec = Decimal(str(value)) * LOCATION_SCALE
-    return int(dec.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    dec = Decimal(str(value))
+    if not dec.is_finite():
+        raise ProtocolError(f"coordinate must be a finite number: {value!r}")
+    scaled = dec * LOCATION_SCALE
+    return int(scaled.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
 def e7_to_degrees(value: int) -> Decimal:
@@ -398,16 +400,23 @@ def e7_to_degrees(value: int) -> Decimal:
 
 
 def normalize_interval_ms(value: int) -> int:
-    """Control の interval_ms を仕様 §5 に従って正規化する。
+    """Control の interval_ms を仕様 §5.1 に従って正規化する（境界クランプ）。
 
-    * ``0`` は既定値 1000 とみなす。
-    * ``100 <= value <= 60000`` の範囲外は既定値 1000 にクランプする。
+    * ``0`` → ``1000``（既定値）
+    * ``1``–``99`` → ``100``（下限にクランプ）
+    * ``100``–``60000`` → そのまま
+    * ``60001``–``65535`` → ``60000``（上限にクランプ）
+
+    受信側は **生値** を書き、送信側がこの関数の結果を適用する。
     """
+    value = int(value)
     if value == 0:
         return DEFAULT_INTERVAL_MS
-    if value < MIN_INTERVAL_MS or value > MAX_INTERVAL_MS:
-        return DEFAULT_INTERVAL_MS
-    return int(value)
+    if value < MIN_INTERVAL_MS:
+        return MIN_INTERVAL_MS
+    if value > MAX_INTERVAL_MS:
+        return MAX_INTERVAL_MS
+    return value
 
 
 def last_error_for_reason(reason: str) -> int:
@@ -768,25 +777,31 @@ class ControlCommand:
 
     @property
     def normalized_interval_ms(self) -> int | None:
-        """送信側が適用する interval_ms（仕様 §5 のクランプ後）。"""
+        """送信側が適用する interval_ms（仕様 §5.1 の正規化後）。"""
         if self.interval_ms is None:
             return None
         return normalize_interval_ms(self.interval_ms)
 
     # -- エンコード / デコード ---------------------------------------------
     def encode(self) -> bytes:
-        """1〜3 bytes のリトルエンディアン表現を返す。"""
+        """1〜3 bytes のリトルエンディアン表現を返す。
+
+        ``START`` / ``SET_INTERVAL`` の ``interval_ms`` は **生値** をそのまま
+        書く（正規化は送信側の責務。仕様 §5.1）。適用値は
+        :attr:`normalized_interval_ms` で取得できる。
+        """
         opcode = int(self.opcode)
         if opcode not in V1_OPCODES:
             raise UnknownOpcodeError(opcode)
         if opcode in (Opcode.START, Opcode.SET_INTERVAL):
-            interval = normalize_interval_ms(
-                DEFAULT_INTERVAL_MS if self.interval_ms is None else int(self.interval_ms)
-            )
-            try:
-                return struct.pack("<BH", opcode, interval)
-            except struct.error as exc:
-                raise WireRangeError("interval_ms", interval, "uint16") from exc
+            if self.interval_ms is None:
+                raise ValueError(
+                    f"{self.name} requires interval_ms (raw uint16 value)"
+                )
+            raw_interval = int(self.interval_ms)
+            if not 0 <= raw_interval <= 0xFFFF:
+                raise WireRangeError("interval_ms", raw_interval, "uint16")
+            return struct.pack("<BH", opcode, raw_interval)
         if opcode == Opcode.SET_EXTENDED:
             enabled = 1 if self.enabled else 0
             return struct.pack("<BB", opcode, enabled)
@@ -857,7 +872,10 @@ class ControlCommand:
 
 @dataclass(slots=True)
 class Status:
-    """Status characteristic（8 bytes、仕様 §6）。"""
+    """Status characteristic（8 bytes、仕様 §6）。
+
+    ``interval_ms`` は仕様 §5.1 の正規化後の値（送信側が適用中の送信間隔）。
+    """
 
     SIZE: ClassVar[int] = STATUS_PACKET_SIZE
     STRUCT: ClassVar[struct.Struct] = struct.Struct("<BBHBBBB")

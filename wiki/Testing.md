@@ -13,7 +13,7 @@ python -m pytest -q
 python -m p2pgps vectors
 ```
 
-現在: **179 tests / 45 vectors**（Linux / macOS / Windows で同一結果）。
+現在: **200 tests / 50 vectors**（CI は Linux / Windows。macOS は未検証）。
 
 ## テストの構成
 
@@ -21,9 +21,9 @@ python -m p2pgps vectors
 | :--- | :--- |
 | `tests/test_protocol.py` | 定数・UUID・オフセット・エンディアン・境界値・roundtrip・例外・度変換・Control 全 opcode・Status・Extended |
 | `tests/test_vectors.py` | 全ベクタの encode / decode / validate / 度変換、sequence シナリオ、仕様 §10 の網羅性 |
-| `tests/test_filter.py` | sequence の状態遷移、stale、haversine、外れ値除去、精度ゲート |
+| `tests/test_filter.py` | sequence の状態遷移、stale、haversine、no-fix の棄却、外れ値除去、精度ゲート |
 | `tests/test_cli.py` | `python -m p2pgps` を subprocess で起動し、終了コードと出力を検証 |
-| `tests/test_spec_consistency.py` | 正本仕様と実装定数の整合性（UUID・opcode・§3.2 例・§3.3 レンジ・シーケンス図） |
+| `tests/test_spec_consistency.py` | 正本仕様と実装定数の整合性（UUID・opcode・§3.2 例・§3.3 レンジ・§5.1 interval 正規化・シーケンス図） |
 | `tests/conftest.py` | ベクタ読み込みフィクスチャ（UTF-8） |
 | `conftest.py` | `sys.path` 補正（editable install なしでも pytest が通る） |
 
@@ -35,9 +35,12 @@ python -m p2pgps vectors
 | :--- | :--- | :--- |
 | `location.json` | location | Location Packet（正常系 7 + 異常系 6） |
 | `extended.json` | extended | Extended Location Packet |
-| `control.json` | control | Control 全 opcode + 異常系 |
+| `control.json` | control | Control 全 opcode + interval 境界（§5.1）+ 異常系（22 件） |
 | `status.json` | status | Status |
 | `sequences.json` | sequence | sequence の巻き戻り / 重複 / 欠番 / ラップ |
+
+> これらの JSON は 3 実装の共通契約データですが、現状は各実装が同じカテゴリ・
+> 同じ値を手動でミラーしており、JSON を直接読む自動同期は未実装（Roadmap）。
 
 Location ベクタの例:
 
@@ -77,7 +80,7 @@ Location ベクタの例:
 | 未知バージョン | `unknown-version` |
 | sequence 巻き戻り | `sequence-regression`（重複・欠番・ラップも） |
 | Extended | `extended-gps` など 5 件 |
-| Control 各 opcode | `control-*` 17 件 |
+| Control 各 opcode | `control-*` 22 件（interval 境界 0/1/99/100/60000/60001/65535 を含む） |
 
 ## CI
 

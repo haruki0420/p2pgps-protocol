@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import math
 import random
 import sys
 import time
@@ -42,6 +43,7 @@ from .protocol import (
     ValidationError,
     decode_packet,
     from_hex,
+    normalize_interval_ms,
     packet_kind,
     to_hex,
 )
@@ -353,7 +355,10 @@ async def _serve_bless(args: argparse.Namespace) -> int:
     await server.start()
     print(f"advertising as {args.device_name} (service {SERVICE_UUID})", flush=True)
 
-    status = Status(state=State.STREAMING, interval_ms=int(args.interval * 1000))
+    status = Status(
+        state=State.STREAMING,
+        interval_ms=normalize_interval_ms(max(0, int(args.interval * 1000))),
+    )
     server.get_characteristic(status_uuid).value = bytearray(status.encode())
     server.update_value(service_uuid, status_uuid)
 
@@ -373,8 +378,11 @@ async def _serve_bless(args: argparse.Namespace) -> int:
 
 
 def _cmd_serve(args: argparse.Namespace) -> int:
-    if args.interval <= 0:
-        print("error: --interval must be > 0", file=sys.stderr)
+    if not math.isfinite(args.interval) or args.interval <= 0:
+        print("error: --interval must be a finite number > 0", file=sys.stderr)
+        return 2
+    if not (math.isfinite(args.lat) and math.isfinite(args.lon)):
+        print("error: --lat/--lon must be finite numbers", file=sys.stderr)
         return 2
     backend = "stdout" if args.stdout else args.backend
     if backend == "auto":
@@ -543,7 +551,12 @@ def build_parser() -> argparse.ArgumentParser:
     encode.add_argument("--vacc", type=_int_auto, default=255, help="垂直精度 m（既定: 255=不明）")
     encode.add_argument("--reserved", type=_int_auto, default=0, help="reserved（既定: 0）")
     encode.add_argument("--opcode", type=_opcode_value, default=None, help="Control opcode 名または整数")
-    encode.add_argument("--interval-ms", type=_int_auto, default=None, help="送信間隔 ms")
+    encode.add_argument(
+        "--interval-ms",
+        type=_int_auto,
+        default=None,
+        help="送信間隔の生値 ms（START / SET_INTERVAL では必須。正規化は仕様 §5.1）",
+    )
     encode.add_argument("--enabled", type=_int_auto, choices=(0, 1), default=None, help="SET_EXTENDED の 0/1")
     encode.add_argument("--state", type=lambda text: _enum_value(State, text), default=int(State.IDLE), help="Status state 名または整数")
     encode.add_argument("--status-flags", type=_int_auto, default=0, help="Status status_flags（既定: 0）")
@@ -567,7 +580,15 @@ def build_parser() -> argparse.ArgumentParser:
     vectors.add_argument("--json", action="store_true", help="JSON で出力")
 
     # -- serve --------------------------------------------------------------
-    serve = subparsers.add_parser("serve", help="送信側シミュレータ（BLE ペリフェラル / stdout）")
+    serve = subparsers.add_parser(
+        "serve",
+        help="送信側シミュレータ（BLE ペリフェラル / stdout）",
+        description=(
+            "送信側シミュレータ。Location / Status を notify する。"
+            "Control characteristic の write 受信は未実装（受信側シミュレータ "
+            "`scan --connect` は実機向け）。"
+        ),
+    )
     serve.add_argument("--lat", type=float, default=35.6812360, help="緯度（既定: 東京駅）")
     serve.add_argument("--lon", type=float, default=139.7671250, help="経度（既定: 東京駅）")
     serve.add_argument("--alt", type=int, default=0, help="標高 m")

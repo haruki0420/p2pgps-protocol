@@ -63,9 +63,10 @@ python -m p2pgps encode --lat 35.6812360 --lon 139.7671250 \
 
 ## ステータス
 
-- プロトコル v1: **2026-11-15 フリーズ**（変更は 3 リポジトリ同時更新）
+- プロトコル v1.0.1: **2026-11-15 更新**（§5.1 interval 正規化の明確化。変更は 3 リポジトリ同時更新）
 - CI: Ubuntu / Windows + Python 3.12 で `pytest` と CLI スモークテスト
 - 実機 BLE の動作検証は未実施（プロトコル層のユニットテストまでを保証）
+- テストベクタは 3 実装の共通契約データ（現状は手動ミラー。自動同期は Roadmap）
 
 ## 既知の制約
 
@@ -74,3 +75,5 @@ python -m p2pgps encode --lat 35.6812360 --lon 139.7671250 \
 - v1 は近距離の第三者が偽の位置を送れる。受信側の必須要件は仕様 §8 を参照。
 - `serve` の BLE ペリフェラル送信には `bless`、`scan` には `bleak` が必要
   （`pip install -e ".[ble]"`）。
+- `serve` の bless シミュレータは Control write を受信しない（Location / Status の
+  notify のみ）。

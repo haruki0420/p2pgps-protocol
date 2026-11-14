@@ -1,6 +1,6 @@
 # P2P GPS BLE プロトコル仕様 v1
 
-> **ステータス: 正本（Canonical） / v1.0 / 凍結 2026-11-15**
+> **ステータス: 正本（Canonical） / v1.0.1 / 更新 2026-11-15**
 >
 > この文書は P2P GPS の BLE プロトコル **v1 の正本**である。実装（`p2pgps-ios` /
 > `p2pgps-android` / `p2pgps-protocol`）とテストベクタはこの文書に従う。変更する場合は
@@ -26,6 +26,7 @@ iPhone / Android が取得した GPS 位置情報を、Bluetooth Low Energy (BLE
 
 | 版 | 日付 | 変更内容 |
 | :--- | :--- | :--- |
+| 1.0.1 | 2026-11-15 | §5.1 を追加: `interval_ms` の正規化を境界クランプ方式に明確化（0 → 1000、1–99 → 100、100–60000 → そのまま、60001–65535 → 60000）。テストベクタは生値 `hex` と `normalized_interval_ms` を分離 |
 | 1.0 | 2026-11-15 | 初版（v1 としてフリーズ）。§3.2 の例示 hex（lat / lon / timestamp）をフィールド定義に合わせて修正。§3.3-4 の検証レンジをスケール（度 × 10^7）に合わせて修正（±900_000_000 / ±1_800_000_000） |
 
 ### 0.2 用語集
@@ -200,12 +201,26 @@ packet = 01 03 2A 00 48 86 44 15 52 C5 4E 53 03 00 05 00 00 52 17 69
 
 | opcode | 名称 | payload | 意味 |
 | ---: | :--- | :--- | :--- |
-| `0x01` | `START` | uint16 LE `interval_ms`（0 = 既定値 1000） | ストリーミング開始。`100 <= interval_ms <= 60000`。範囲外は既定値にクランプ |
+| `0x01` | `START` | uint16 LE `interval_ms`（0 = 既定値 1000） | ストリーミング開始。`100 <= interval_ms <= 60000`。範囲外は境界値にクランプ（§5.1） |
 | `0x02` | `STOP` | なし | ストリーミング停止（アドバタイズは継続） |
-| `0x03` | `SET_INTERVAL` | uint16 LE `interval_ms` | 送信間隔の変更（ストリーミング中でも可） |
+| `0x03` | `SET_INTERVAL` | uint16 LE `interval_ms` | 送信間隔の変更（ストリーミング中でも可）。正規化は §5.1 |
 | `0x04` | `REQUEST_FIX` | なし | 次回 notify を即時送信（1 回） |
 | `0x05` | `SET_EXTENDED` | uint8 `enabled` (0/1) | Extended Location の notify 有効化 |
 | `0x7F` | `RESET` | なし | 既定設定に戻す（interval=1000, extended=off, sequence=0） |
+
+### 5.1 `interval_ms` の正規化（v1.0.1 で明確化）
+
+`START` / `SET_INTERVAL` の `interval_ms` は、受信側が**生値**を書き、送信側が以下の規則で正規化して適用する。Status の `interval_ms` は正規化後の値を返す。
+
+| 生値 | 適用値 |
+| ---: | ---: |
+| `0` | `1000`（既定値） |
+| `1`–`99` | `100`（下限にクランプ） |
+| `100`–`60000` | そのまま |
+| `60001`–`65535` | `60000`（上限にクランプ） |
+
+- テストベクタでは「生の Control バイト列」と「正規化後の値」を別フィールドで表現する（`hex` は生値、`normalized_interval_ms` は適用値）。
+- この規則は v1.0.1 で「範囲外は既定値にクランプ」という曖昧な記述を置き換えたもの。Python / Android / iOS の 3 実装で統一する。
 
 - 未知の opcode は無視し、Status の `last_error = 1 (UNKNOWN_OPCODE)` を設定する。
 - 不正長は無視し、`last_error = 2 (BAD_LENGTH)`。
@@ -219,7 +234,7 @@ packet = 01 03 2A 00 48 86 44 15 52 C5 4E 53 03 00 05 00 00 52 17 69
 | ---: | ---: | :--- | :--- | :--- |
 | 0 | 1 | `version` | uint8 | `0x01` |
 | 1 | 1 | `state` | uint8 | 0=Idle, 1=Streaming, 2=Paused, 3=Error |
-| 2 | 2 | `interval_ms` | uint16 LE | 現在の送信間隔 |
+| 2 | 2 | `interval_ms` | uint16 LE | 現在の送信間隔（正規化後、§5.1） |
 | 4 | 1 | `battery_pct` | uint8 | 255 = 不明 |
 | 5 | 1 | `status_flags` | uint8 | bit0 = extended enabled, bit1 = fix available, bit2 = charging, bit3 = low battery |
 | 6 | 1 | `last_error` | uint8 | 0=none, 1=unknown opcode, 2=bad length, 3=location unavailable, 4=internal |

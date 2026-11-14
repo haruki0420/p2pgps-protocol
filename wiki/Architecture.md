@@ -8,7 +8,7 @@
 ```
 p2pgps-protocol（正本）
   spec/protocol-v1.md   ← 数値・バイト配置の規範
-  tests/vectors/*.json  ← 3 実装が共有するテストデータ
+  tests/vectors/*.json  ← 3 実装の共通契約データ（現状は手動ミラー）
   p2pgps/               ← Python リファレンス実装
         │
         ├──▶ p2pgps-ios (Swift)     P2PGPSProtocol モジュール
@@ -21,7 +21,7 @@ p2pgps-protocol（正本）
 | モジュール | 役割 |
 | :--- | :--- |
 | `p2pgps/protocol.py` | 定数（UUID・サイズ・スケール・範囲）、列挙（flags / opcode / state / last_error）、例外、`LocationPacket` / `ExtendedPacket` / `ControlCommand` / `Status`、hex ヘルパ、度変換、汎用デコード |
-| `p2pgps/filter.py` | `SequenceTracker`（first / ok / gap / duplicate / regression、uint16 ラップ対応）、`is_stale`（±24h）、`haversine_m`、`FixFilter`（検証 → sequence → 精度 → 外れ値 → stale） |
+| `p2pgps/filter.py` | `SequenceTracker`（first / ok / gap / duplicate / regression、uint16 ラップ対応）、`is_stale`（±24h）、`haversine_m`、`FixFilter`（検証 → sequence → no-fix → 精度 → 外れ値 → stale） |
 | `p2pgps/vectors.py` | `tests/vectors/*.json` のローダと検証。`p2pgps vectors` の実体 |
 | `p2pgps/cli.py` | `encode` / `decode` / `vectors` / `serve` / `scan` |
 | `p2pgps/__init__.py` | 公開 API（`from p2pgps import LocationPacket, Flags, FixFilter`） |
@@ -53,9 +53,10 @@ cli.py ──▶ vectors.py ──▶ protocol.py
             ├─ NG → ValidationError(reason) → 破棄 / Status.last_error
             └─ OK → FixFilter.feed()
                       ├─ sequence 監視（巻き戻りはログのみ）
+                      ├─ 未測位（VALID_FIX=0）→ accepted=False / reason="no_fix"
                       ├─ 精度ゲート / 外れ値除去
                       └─ stale 警告
-                           └─ 地図表示・位置注入
+                           └─ accepted かつ injectable → 地図表示・位置注入
 ```
 
 パースと検証を分離しているため、不正パケットでもフィールドを診断・ログ・
@@ -71,9 +72,17 @@ cli.py ──▶ vectors.py ──▶ protocol.py
 | `dataclass(slots=True)` + 仕様と同じフィールド名 | JSON ベクタとそのまま相互変換 |
 | `IntEnum` / `IntFlag` | ワイヤ値と直接対応し、名前付きでコードが書ける |
 | `RejectReason` は `str` Enum | JSON の `expect.reason` と直接比較できる |
-| テストベクタは JSON | Swift / Kotlin / Python が同じデータを読める。実装の出力をベクタにしない |
-| 仕様書と定数の整合性テスト | UUID・opcode・§3.2 例・§3.3 レンジのずれを CI で検出 |
+| テストベクタは JSON | 3 実装の共通契約データ。現状は手動ミラー（自動同期は Roadmap）。実装の出力をベクタにしない |
+| 仕様書と定数の整合性テスト | UUID・opcode・§3.2 例・§3.3 レンジ・§5.1 interval 正規化のずれを CI で検出 |
 | BLE は optional extra | `serve` は bless、`scan` は bleak。未インストール時は stdout / 明確なエラー。CI を BLE 依存にしない |
+
+## Roadmap（未実装・既知の課題）
+
+- **共有ベクタの自動同期**: Android / iOS のテストが `tests/vectors/*.json` を
+  直接読む仕組みは未実装。現状は手動ミラーで、実装間の乖離検出は
+  `tests/test_spec_consistency.py` とレビューの範囲。
+- **`serve` の Control write 受信**: bless シミュレータは Location / Status の
+  notify のみ（Control characteristic の write 受信は未実装）。
 
 ## エラーマッピング
 

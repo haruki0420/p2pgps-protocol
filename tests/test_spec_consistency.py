@@ -32,6 +32,7 @@ from p2pgps.protocol import (
     State,
     Status,
     StatusFlags,
+    normalize_interval_ms,
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -171,6 +172,30 @@ def test_spec_contains_control_payload_sizes(spec_text: str) -> None:
     # Control は 1〜3 bytes、Status / Extended は 8 bytes 固定
     assert "1〜3 bytes" in spec_text
     assert "固定 8 bytes" in spec_text
+
+
+def test_spec_interval_normalization_matches_implementation(spec_text: str) -> None:
+    """仕様 §5.1（v1.0.1）の境界クランプ表と実装が一致する。"""
+    assert "### 5.1" in spec_text
+    assert "v1.0.1" in spec_text
+    for row in (
+        "| `0` | `1000`（既定値） |",
+        "| `1`–`99` | `100`（下限にクランプ） |",
+        "| `100`–`60000` | そのまま |",
+        "| `60001`–`65535` | `60000`（上限にクランプ） |",
+    ):
+        assert row in spec_text, f"§5.1 row missing: {row}"
+
+    assert normalize_interval_ms(0) == 1000
+    assert normalize_interval_ms(1) == 100
+    assert normalize_interval_ms(99) == 100
+    assert normalize_interval_ms(100) == 100
+    assert normalize_interval_ms(60000) == 60000
+    assert normalize_interval_ms(60001) == 60000
+    assert normalize_interval_ms(65535) == 60000
+    # encode は生値を書く（正規化しない）
+    assert ControlCommand.start(50).encode().hex() == "013200"
+    assert ControlCommand.start(60001).encode().hex() == "0161ea"
 
 
 def test_spec_contains_null_island_and_stale_rules(spec_text: str) -> None:

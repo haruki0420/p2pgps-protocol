@@ -57,7 +57,7 @@ def test_module_help() -> None:
 def test_version() -> None:
     result = run_cli("--version")
     assert result.returncode == 0
-    assert "1.0.0" in result.stdout
+    assert "1.0.1" in result.stdout
 
 
 # ---------------------------------------------------------------------------
@@ -107,8 +107,19 @@ def test_encode_control() -> None:
     result = run_cli("encode", "--kind", "control", "--opcode", "START", "--interval-ms", "1000")
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "01e803"
+    # 仕様 §5.1: hex は生値（正規化しない）
+    result = run_cli("encode", "--kind", "control", "--opcode", "START", "--interval-ms", "0")
+    assert result.stdout.strip() == "010000"
+    result = run_cli("encode", "--kind", "control", "--opcode", "START", "--interval-ms", "60001")
+    assert result.stdout.strip() == "0161ea"
     result = run_cli("encode", "--kind", "control", "--opcode", "reset")
     assert result.stdout.strip() == "7f"
+
+
+def test_encode_control_requires_interval() -> None:
+    result = run_cli("encode", "--kind", "control", "--opcode", "START")
+    assert result.returncode == 2
+    assert "requires interval_ms" in result.stderr
 
 
 def test_encode_extended() -> None:
@@ -181,6 +192,20 @@ def test_decode_null_island_is_invalid(location_vectors: list[dict[str, Any]]) -
     assert result.returncode == 1
     assert payload["valid"] is False
     assert payload["reason"] == "null_island"
+
+
+def test_decode_control_raw_interval() -> None:
+    # 仕様 §5.1: hex は生値、normalized_interval_ms は送信側の適用値
+    result = run_cli("decode", "--hex", "010000", "--kind", "control")
+    payload = parse_json_output(result)
+    assert result.returncode == 0
+    assert payload["kind"] == "control"
+    assert payload["fields"]["interval_ms"] == 0
+    assert payload["decoded"]["normalized_interval_ms"] == 1000
+    result = run_cli("decode", "--hex", "01ffff", "--kind", "control")
+    payload = parse_json_output(result)
+    assert payload["fields"]["interval_ms"] == 65535
+    assert payload["decoded"]["normalized_interval_ms"] == 60000
 
 
 def test_decode_unknown_opcode() -> None:
@@ -272,7 +297,22 @@ def test_serve_stdout() -> None:
 def test_serve_rejects_bad_interval() -> None:
     result = run_cli("serve", "--stdout", "--interval", "0", "--count", "1")
     assert result.returncode == 2
-    assert "--interval must be > 0" in result.stderr
+    assert "--interval must be a finite number > 0" in result.stderr
+
+
+def test_serve_rejects_non_finite_interval() -> None:
+    result = run_cli("serve", "--stdout", "--interval", "nan", "--count", "1")
+    assert result.returncode == 2
+    assert "--interval must be a finite number > 0" in result.stderr
+
+
+def test_encode_rejects_non_finite_coordinate() -> None:
+    # L-21: NaN / inf は traceback ではなくエラーメッセージで終了する
+    for value in ("nan", "inf", "-inf"):
+        result = run_cli("encode", f"--lat={value}", "--lon", "139.0")
+        assert result.returncode == 2
+        assert "finite" in result.stderr
+        assert "Traceback" not in result.stderr
 
 
 # ---------------------------------------------------------------------------

@@ -34,7 +34,7 @@ editable install をしない場合は、リポジトリ直下から `python -m 
 
 ```bash
 python -m pytest -q
-# 179 passed
+# 200 passed
 ```
 
 テストベクタだけを CLI で検証することもできます。
@@ -42,12 +42,12 @@ python -m pytest -q
 ```bash
 python -m p2pgps vectors
 # vectors: .../tests/vectors
-#   control.json: 17/17 passed
+#   control.json: 22/22 passed
 #   extended.json: 5/5 passed
 #   location.json: 13/13 passed
 #   sequences.json: 5/5 passed
 #   status.json: 5/5 passed
-# total: 45/45 passed
+# total: 50/50 passed
 ```
 
 ## 4. CLI の使い方
@@ -68,9 +68,11 @@ python -m p2pgps encode --kind extended --provider gps --battery 87 \
   --satellites 12 --course 12345 --vacc 5
 # => 0101570c39300500
 
-# Control（START interval 1000ms）
+# Control（START interval 1000ms。hex は生値）
 python -m p2pgps encode --kind control --opcode START --interval-ms 1000
 # => 01e803
+python -m p2pgps encode --kind control --opcode START --interval-ms 0
+# => 010000（送信側は既定値 1000 を適用。仕様 §5.1）
 
 # Status（Streaming / battery 80% / extended + fix）
 python -m p2pgps encode --kind status --state streaming --interval-ms 1000 \
@@ -114,6 +116,9 @@ python -m p2pgps serve --stdout --interval 1.0
 python -m p2pgps serve --lat 35.6812360 --lon 139.7671250 --interval 1.0
 ```
 
+> `serve` の bless バックエンドは Location / Status の notify のみで、Control
+> characteristic の write 受信は未実装です（`scan --connect` は実機向け）。
+
 ### scan — 受信側シミュレータ（bleak が必要）
 
 ```bash
@@ -140,7 +145,7 @@ decoded.validate()
 
 filter_ = FixFilter()
 decision = filter_.feed(decoded)
-print(decision.accepted, decision.stale, decision.sequence_status)
+print(decision.accepted, decision.injectable, decision.stale)
 ```
 
 ## 6. 次に読む

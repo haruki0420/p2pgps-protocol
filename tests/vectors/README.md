@@ -1,9 +1,10 @@
-# テストベクタ（共有契約データ）
+# テストベクタ（共通契約データ）
 
 `tests/vectors/*.json` は **P2P GPS BLE プロトコル v1 のテストベクタ**です。
-Python / Swift / Kotlin の 3 実装が同じ JSON を読んで encode / decode を検証します。
-仕様の正本は [`spec/protocol-v1.md`](../../spec/protocol-v1.md)、仕様 §10 が要求する
-ベクタをすべて含みます。
+Python / Swift / Kotlin の 3 実装が共有する**契約データ**ですが、現状は各実装が
+同じカテゴリ・同じ値を手動でミラーしており、JSON を直接読む自動同期は未実装です
+（Roadmap）。仕様の正本は [`spec/protocol-v1.md`](../../spec/protocol-v1.md)、
+仕様 §10 が要求するベクタをすべて含みます。
 
 ## ファイル一覧
 
@@ -58,6 +59,9 @@ Python / Swift / Kotlin の 3 実装が同じ JSON を読んで encode / decode 
   `bad_length` / `unknown_version` / `reserved_flag_set` /
   `latitude_out_of_range` / `longitude_out_of_range` / `null_island`。
 - `expect.valid_fix`: `VALID_FIX` ビットの期待値。
+- `no-fix`（`VALID_FIX=0`）は仕様 §3.3 上は**パケットとして受理**されます
+  （`expect.valid=true`）が、受信側フィルタでは `accepted=False` /
+  `reason="no_fix"` として**注入しません**（`FilterDecision.injectable=false`）。
 
 ### Extended / Status ベクタ
 
@@ -80,9 +84,12 @@ Python / Swift / Kotlin の 3 実装が同じ JSON を読んで encode / decode 
 ```
 
 - `command`: 受信側が書き込むコマンド。`opcode` は名前（`START` など）または整数。
-- `hex`: 期待する 1〜3 bytes。
-- `expect.decoded`: デコード結果。`normalized_interval_ms` は送信側が適用する
-  クランプ後の値（仕様 §5: 範囲外は既定値 1000）。
+- `hex`: **生値**の 1〜3 bytes（受信側が書くバイト列そのもの）。
+  例: `interval_ms = 0` なら `010000`、`50` なら `013200`、`60001` なら `0161ea`。
+- `expect.decoded.interval_ms`: デコードした生値。
+- `expect.decoded.normalized_interval_ms`: 送信側が適用する正規化後の値
+  （仕様 §5.1 の境界クランプ: 0→1000、1–99→100、100–60000→そのまま、
+  60001–65535→60000）。
 
 異常系:
 
@@ -127,10 +134,15 @@ python -m pytest                  # テストスイート（ベクタ検証を�
 
 ### Swift / Kotlin から読む場合
 
+> 現状、Swift / Kotlin のテストはこの JSON を直接読んでおらず、同じ値を手動で
+> ミラーしています（自動同期は Roadmap）。導入する場合の手順は次のとおりです。
+
 1. このディレクトリの JSON をテストリソースとしてコピーする（サブモジュール / CI で取得）。
 2. `hex` をバイト列に変換し、実装の `decode()` と比較する。
 3. `wire` の値で `encode()` し、`hex` と一致することを確認する。
 4. `expect.valid` / `expect.reason` で検証結果を比較する。
+5. Control は `command` から encode し `hex`（生値）と一致すること、
+   `normalized_interval_ms` が仕様 §5.1 の適用値であることを確認する。
 
 実装間のフィールド名対応は
 [`docs/integration.md`](../../docs/integration.md) を参照してください。

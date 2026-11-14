@@ -35,6 +35,7 @@ from p2pgps.protocol import (
     LocationPacket,
     Opcode,
     PacketLengthError,
+    ProtocolError,
     Provider,
     RejectReason,
     State,
@@ -350,6 +351,16 @@ def test_degrees_to_e7_rounds_half_away_from_zero() -> None:
     assert degrees_to_e7("35.68123605") == 356812361
 
 
+@pytest.mark.parametrize(
+    "value",
+    [float("nan"), float("inf"), float("-inf"), Decimal("NaN"), Decimal("Infinity")],
+)
+def test_degrees_to_e7_rejects_non_finite(value: object) -> None:
+    # L-21: NaN / inf は traceback ではなく ProtocolError にする
+    with pytest.raises(ProtocolError):
+        degrees_to_e7(value)  # type: ignore[arg-type]
+
+
 def test_e7_to_degrees() -> None:
     assert e7_to_degrees(356812360) == Decimal("35.681236")
     assert e7_to_degrees(-899999999) == Decimal("-89.9999999")
@@ -465,14 +476,20 @@ def test_control_opcode_values_match_spec() -> None:
 @pytest.mark.parametrize(
     ("command", "expected_hex"),
     [
-        (ControlCommand.start(1000), "01e803"),
-        (ControlCommand.start(0), "01e803"),
+        # 仕様 §5.1: encode は生値をそのまま書く（正規化しない）
+        (ControlCommand.start(0), "010000"),
+        (ControlCommand.start(1), "010100"),
+        (ControlCommand.start(50), "013200"),
+        (ControlCommand.start(99), "016300"),
         (ControlCommand.start(100), "016400"),
+        (ControlCommand.start(1000), "01e803"),
         (ControlCommand.start(60000), "0160ea"),
-        (ControlCommand.start(50), "01e803"),
-        (ControlCommand.start(60001), "01e803"),
+        (ControlCommand.start(60001), "0161ea"),
+        (ControlCommand.start(65535), "01ffff"),
         (ControlCommand.stop(), "02"),
+        (ControlCommand.set_interval(0), "030000"),
         (ControlCommand.set_interval(500), "03f401"),
+        (ControlCommand.set_interval(60001), "0361ea"),
         (ControlCommand.request_fix(), "04"),
         (ControlCommand.set_extended(True), "0501"),
         (ControlCommand.set_extended(False), "0500"),
@@ -481,6 +498,22 @@ def test_control_opcode_values_match_spec() -> None:
 )
 def test_control_encode(command: ControlCommand, expected_hex: str) -> None:
     assert command.encode().hex() == expected_hex
+
+
+def test_control_encode_requires_interval() -> None:
+    # L-20: START / SET_INTERVAL の interval_ms は必須 payload
+    for command in (
+        ControlCommand(opcode=int(Opcode.START)),
+        ControlCommand(opcode=int(Opcode.SET_INTERVAL)),
+    ):
+        with pytest.raises(ValueError):
+            command.encode()
+
+
+@pytest.mark.parametrize("raw", [-1, 65536])
+def test_control_encode_rejects_out_of_uint16(raw: int) -> None:
+    with pytest.raises(WireRangeError):
+        ControlCommand.start(raw).encode()
 
 
 @pytest.mark.parametrize(
@@ -510,11 +543,12 @@ def test_control_decode(
 
 
 def test_control_decode_keeps_raw_interval_and_normalizes() -> None:
-    # 範囲外の生値はそのまま保持し、送信側が適用する値を normalized_interval_ms で示す
-    command = ControlCommand.decode(from_hex("013200"))  # 50 ms
+    # 生値はそのまま保持し、送信側が適用する値を normalized_interval_ms で示す
+    command = ControlCommand.decode(from_hex("013200"))  # 生値 50 ms
     assert command.interval_ms == 50
-    assert command.normalized_interval_ms == DEFAULT_INTERVAL_MS
-    assert command.encode().hex() == "01e803"
+    assert command.normalized_interval_ms == 100  # 仕様 §5.1: 下限 100
+    # encode は生値をそのまま書く（正規化しない）
+    assert command.encode().hex() == "013200"
 
 
 @pytest.mark.parametrize("hex_value", ["10", "ff", "00"])
@@ -550,13 +584,20 @@ def test_control_from_dict_and_to_dict() -> None:
 
 
 def test_normalize_interval_ms() -> None:
-    assert normalize_interval_ms(0) == 1000
-    assert normalize_interval_ms(99) == 1000
+    # 仕様 §5.1 の境界クランプ表
+    assert normalize_interval_ms(0) == 1000  # 既定値
+    assert normalize_interval_ms(1) == 100
+    assert normalize_interval_ms(50) == 100
+    assert normalize_interval_ms(99) == 100
     assert normalize_interval_ms(100) == 100
+    assert normalize_interval_ms(101) == 101
+    assert normalize_interval_ms(59999) == 59999
     assert normalize_interval_ms(60000) == 60000
-    assert normalize_interval_ms(60001) == 1000
+    assert normalize_interval_ms(60001) == 60000
+    assert normalize_interval_ms(65535) == 60000
     assert MIN_INTERVAL_MS == 100
     assert MAX_INTERVAL_MS == 60000
+    assert DEFAULT_INTERVAL_MS == 1000
 
 
 # ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "p2pgps-protocol"
-version = "1.0.0"
+version = "1.0.1"
 description = "P2P GPS BLE protocol v1: canonical spec, Python reference implementation, and shared test vectors"
 readme = "README.md"
 requires-python = ">=3.10"

@@ -208,12 +208,36 @@ def test_fix_filter_accuracy_gate() -> None:
     assert filter_.feed(make_packet(accuracy_m=255)).accepted is True
 
 
-def test_fix_filter_accepts_no_fix_packet() -> None:
+def test_fix_filter_rejects_no_fix_packet() -> None:
+    # C-2: VALID_FIX=0 は受理しない（表示も注入もしない）
     filter_ = FixFilter()
     packet = make_packet(flags=0, latitude=0, longitude=0)
     decision = filter_.feed(packet)
+    assert decision.accepted is False
+    assert decision.reason == "no_fix"
+    assert decision.injectable is False
+    assert filter_.last_fix is None
+
+
+def test_fix_filter_no_fix_does_not_poison_outlier_baseline() -> None:
+    # C-2 の再現ケース: no-fix の直後の実 fix が outlier で棄却されないこと
+    filter_ = FixFilter()
+    no_fix = make_packet(flags=0, latitude=0, longitude=0, sequence=1, timestamp=1000)
+    assert filter_.feed(no_fix).accepted is False
+    assert filter_.last_fix is None
+    tokyo = make_packet(sequence=2, timestamp=1001)
+    decision = filter_.feed(tokyo)
     assert decision.accepted is True
+    assert decision.injectable is True
     assert decision.reason is None
+    assert filter_.last_fix == tokyo
+
+
+def test_fix_filter_accepted_fix_is_injectable() -> None:
+    filter_ = FixFilter()
+    decision = filter_.feed(make_packet())
+    assert decision.accepted is True
+    assert decision.injectable is True
 
 
 def test_fix_filter_sequence_duplicate() -> None:
@@ -242,9 +266,11 @@ def test_filter_decision_to_dict() -> None:
         sequence_status=SequenceStatus.OK,
         distance_m=10.0,
         implied_speed_mps=10.0,
+        injectable=True,
     )
     data = decision.to_dict()
     assert data["accepted"] is True
+    assert data["injectable"] is True
     assert data["stale"] is True
     assert data["sequence_status"] == "ok"
     assert data["distance_m"] == 10.0

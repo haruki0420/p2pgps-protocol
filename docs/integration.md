@@ -8,11 +8,14 @@
 | 実装 | 場所 | 役割 | 検証 |
 | :--- | :--- | :--- | :--- |
 | Python（正本） | `p2pgps-protocol/p2pgps/` | 仕様のリファレンス実装。ベクタ検証・CLI・受信側シミュレータ | `pytest`（CI: Ubuntu / Windows） |
-| Swift | `p2pgps-ios/Sources/P2PGPSProtocol/` | iPhone Sender の encode、iPad Receiver の decode / validate | XCTest + 共有ベクタ JSON |
-| Kotlin | `p2pgps-android/protocol/` | Android Sender の encode、Status / Control の処理 | JUnit + 共有ベクタ JSON |
+| Swift | `p2pgps-ios/Sources/P2PGPSProtocol/` | iPhone Sender の encode、iPad Receiver の decode / validate | XCTest（ベクタ値は手動ミラー） |
+| Kotlin | `p2pgps-android/app/src/main/java/jp/haruki0420/p2pgps/protocol/` | Android Sender の encode、Status / Control の処理 | JUnit（ベクタ値は手動ミラー） |
 
 **正本は `spec/protocol-v1.md`**。実装間で解釈が割れた場合は仕様書の表を優先し、
 必要なら 3 リポジトリ同時に修正する。
+
+> 現状、`tests/vectors/*.json` を Swift / Kotlin のテストが直接読む仕組みは未実装で、
+> 同じカテゴリ・同じ値を手動でミラーしている。自動同期は Roadmap（§10）。
 
 ## 2. 定数対応表
 
@@ -29,7 +32,7 @@
 | Status 長 | 8 bytes | 8 | 8 |
 | 緯度経度スケール | `10_000_000` | `Int32` | `Int` |
 | 既定 interval | `1000` ms | `UInt16` | `Int` |
-| interval 範囲 | `100...60000` | クランプ | クランプ |
+| interval 正規化 | 境界クランプ（§5.1） | `normalizedInterval()` | `clampInterval()` |
 
 UUID は **文字列表現（正規形）で定義**し、BLE スタックに渡すときに各 OS が
 ワイヤ表現（リトルエンディアン）へ変換する。自前でバイト列化する場合は
@@ -98,8 +101,12 @@ Python 実装の `LocationPacket.validate()` と `FilterDecision` が同じ順�
 | `0x05` | `SET_EXTENDED` | `05` + uint8 enabled |
 | `0x7F` | `RESET` | `7F` |
 
-- `interval_ms` は `0` を既定値 1000 とみなし、`100..60000` の範囲外は
-  既定値 1000 にクランプする（送信側で適用）。
+- `interval_ms` は受信側が**生値**を書き、送信側が仕様 §5.1 で正規化して適用する。
+  - `0` → `1000`（既定値）
+  - `1`–`99` → `100`（下限にクランプ）
+  - `100`–`60000` → そのまま
+  - `60001`–`65535` → `60000`（上限にクランプ）
+- Status の `interval_ms` は正規化後の値を返す。
 - 未知 opcode は無視して `Status.last_error = 1`、長さ不正は無視して
   `Status.last_error = 2`。
 - 受信側は接続直後に Status を read し、`START(1000)` を書く（再接続も冪等）。
@@ -120,20 +127,22 @@ Python 実装の `LocationPacket.validate()` と `FilterDecision` が同じ順�
 
 ## 6. テストベクタの共有
 
-`tests/vectors/*.json` を各リポジトリのテストリソースへコピー（または CI で
-`p2pgps-protocol` を checkout）して使う。
+`tests/vectors/*.json` は 3 実装の共通契約データだが、**現状は自動共有ではない**。
+各リポジトリは同じカテゴリ・同じ値を手動でミラーしている（自動同期は Roadmap §10）。
+手動ミラーを更新するときは次の手順を推奨する。
 
 - Swift: `Bundle.module` のリソースとして `location.json` 等を追加し、
-  `JSONDecoder` で `wire` / `hex` / `expect` を読む。
+  `JSONDecoder` で `wire` / `hex` / `expect` を読む（導入する場合）。
 - Kotlin: `src/test/resources/vectors/` に置き、`kotlinx.serialization` または
-  `org.json` で読む。
+  `org.json` で読む（導入する場合）。
 
 検証内容（3 実装共通）:
 
 1. `wire` の値で encode し、`hex` と一致する。
 2. `hex` を decode し、`wire` と一致する。
 3. `expect.valid` / `expect.reason` と validate 結果が一致する。
-4. Control は `command` から encode し、`hex` と一致する。
+4. Control は `command` から encode し、`hex` と一致する（`hex` は生値）。
+   `normalized_interval_ms` は仕様 §5.1 の適用値。
 5. sequence シナリオは `SequenceTracker` 相当の状態遷移を検証する。
 
 ## 7. バージョニングと互換性
@@ -154,9 +163,10 @@ Python 実装の `LocationPacket.validate()` と `FilterDecision` が同じ順�
 - [ ] §3.3 の検証順序と Null Island 対策
 - [ ] sequence の uint16 ラップと巻き戻りログ
 - [ ] stale（±24 時間）の警告
-- [ ] Control のクランプ（0 → 1000、範囲外 → 1000）と未知 opcode / 長さ不正
+- [ ] 未測位（`VALID_FIX=0`）は表示・注入しない（外れ値基準点も更新しない）
+- [ ] Control の正規化（§5.1 の境界クランプ）と未知 opcode / 長さ不正
 - [ ] Status の 8 bytes レイアウトと 10 秒ハートビート
-- [ ] 共有テストベクタ全件が自実装で通る
+- [ ] 共有テストベクタの値（手動ミラー）全件が自実装で通る
 - [ ] 実機 BLE で iPad（central）⇄ iPhone / Android（peripheral）の接続確認
 
 ## 9. よくある落とし穴
@@ -167,6 +177,16 @@ Python 実装の `LocationPacket.validate()` と `FilterDecision` が同じ順�
 | 南極の標高が巨大な正値になる | `altitude_m` を符号なしで読んでいる | int16 として読む |
 | 2106 年以降で timestamp が負になる | uint32 を符号付きで読んでいる | 符号なしで読む |
 | iOS / Android で UUID が一致しない | バイトオーダーの変換を自前でやっている | 文字列 UUID を OS の BLE API に渡す。自前変換は 16 bytes 逆順 |
-| START の interval が効かない | `0` をそのまま使っている | 0 → 1000、範囲外 → 1000 にクランプ |
+| START の interval が効かない | `0` をそのまま使っている | §5.1 で正規化（0 → 1000、1–99 → 100、60001–65535 → 60000） |
+| no-fix の直後の実 fix が外れ値になる | 未測位パケットを基準点にしている | `VALID_FIX=0` は `accepted=False` / `reason="no_fix"` とし、基準点を更新しない |
 | Null Island が表示される | 未測位パケットを有効 fix として扱っている | `VALID_FIX` を確認し、(0,0) ±0.0001° を無効扱い |
 | sequence で誤検知する | uint16 ラップを考慮していない | `(seq - last) & 0xFFFF` で差分を計算 |
+
+## 10. Roadmap（未実装）
+
+- **共有ベクタの自動同期**: Android / iOS のテストが `tests/vectors/*.json` を
+  直接読む仕組みは未実装。現状は手動ミラーであり、実装間の乖離検出は
+  `p2pgps-protocol` の CI（`test_spec_consistency.py`）とレビューの範囲。
+  CI で `p2pgps-protocol` を checkout して JSON を読む方式を検討中。
+- **`serve` の Control write 受信**: bless シミュレータは Location / Status の
+  notify のみ。Control characteristic の write 受信は未実装。

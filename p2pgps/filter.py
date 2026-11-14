@@ -156,7 +156,12 @@ def haversine_m(
 
 @dataclass(slots=True, frozen=True)
 class FilterDecision:
-    """:meth:`FixFilter.feed` の判定結果。"""
+    """:meth:`FixFilter.feed` の判定結果。
+
+    ``accepted`` は「表示・記録してよい」、``injectable`` は「位置注入してよい」を
+    表す。未測位（``VALID_FIX=0``）は ``accepted=False`` / ``reason="no_fix"`` と
+    なり、どちらも False。
+    """
 
     accepted: bool
     reason: str | None = None
@@ -164,10 +169,12 @@ class FilterDecision:
     sequence_status: SequenceStatus | None = None
     distance_m: float | None = None
     implied_speed_mps: float | None = None
+    injectable: bool = False
 
     def to_dict(self) -> dict[str, object]:
         return {
             "accepted": self.accepted,
+            "injectable": self.injectable,
             "reason": self.reason,
             "stale": self.stale,
             "sequence_status": (
@@ -185,17 +192,19 @@ class FixFilter:
 
         filter_ = FixFilter()
         decision = filter_.feed(packet)
-        if decision.accepted:
-            use(packet)
+        if decision.injectable:
+            inject(packet)
 
     判定順:
 
     1. 仕様 §3.3 の検証（不正なら ``accepted=False``、``reason`` は
        :class:`p2pgps.protocol.RejectReason` の値）。
     2. sequence の観測（受理可否には影響しない）。
-    3. 精度ゲート（``max_accuracy_m`` 指定時のみ。``255`` = 不明は通す）。
-    4. 外れ値除去（直前の受理 fix からの移動速度が ``max_speed_mps`` 超で棄却）。
-    5. stale 判定（受理するが ``stale=True``。注入可否は呼び出し側の設定）。
+    3. 未測位（``VALID_FIX=0``）は ``accepted=False`` / ``reason="no_fix"``。
+       外れ値判定の基準点（``last_fix``）は更新しない（仕様 §3.1・C-2）。
+    4. 精度ゲート（``max_accuracy_m`` 指定時のみ。``255`` = 不明は通す）。
+    5. 外れ値除去（直前の受理 fix からの移動速度が ``max_speed_mps`` 超で棄却）。
+    6. stale 判定（受理するが ``stale=True``。注入可否は呼び出し側の設定）。
     """
 
     def __init__(
@@ -234,6 +243,15 @@ class FixFilter:
 
         sequence_status = self.sequence_tracker.observe(packet.sequence)
         stale = is_stale(packet, now=now, window_seconds=self.stale_window_seconds)
+
+        # 未測位（VALID_FIX=0）は表示も注入もしない。外れ値判定の基準点を汚染しない。
+        if not packet.has_valid_fix:
+            return FilterDecision(
+                accepted=False,
+                reason="no_fix",
+                stale=stale,
+                sequence_status=sequence_status,
+            )
 
         if (
             self.max_accuracy_m is not None
@@ -278,4 +296,5 @@ class FixFilter:
             sequence_status=sequence_status,
             distance_m=distance_m,
             implied_speed_mps=implied_speed,
+            injectable=True,
         )

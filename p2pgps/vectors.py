@@ -1,7 +1,8 @@
 """テストベクタ（``tests/vectors/*.json``）の読み込みと検証。
 
-テストベクタは iOS / Android / Python の 3 実装が共有する機械可読な契約データである。
-形式は ``tests/vectors/README.md`` を参照。
+テストベクタは iOS / Android / Python が共有する**契約データ**である。
+現状は各実装が同じカテゴリ・同じ値を手動でミラーしており、JSON を直接読む
+自動同期は未実装（Roadmap）。このモジュールは Python 側の正本データを検証する。
 
 * :func:`find_vectors_dir` — ベクタディレクトリの探索（CLI 用）。
 * :func:`load_vector_files` — JSON の読み込み。

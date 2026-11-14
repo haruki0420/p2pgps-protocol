@@ -186,6 +186,49 @@ def test_control_vectors_cover_all_opcodes(
     }
 
 
+def test_control_vectors_cover_interval_boundaries(
+    control_vectors: list[dict[str, Any]],
+) -> None:
+    """仕様 §5.1 の境界値（0/1/99/100/60000/60001/65535）を網羅する。"""
+    ids = {vector["id"] for vector in control_vectors}
+    for expected_id in (
+        "control-start-default",
+        "control-start-1",
+        "control-start-99",
+        "control-start-100",
+        "control-start-60000",
+        "control-start-60001",
+        "control-start-65535",
+    ):
+        assert expected_id in ids
+
+    for vector in control_vectors:
+        command = vector.get("command")
+        if not command or "interval_ms" not in command:
+            continue
+        raw = command["interval_ms"]
+        # hex は生値（opcode 1 byte + uint16 LE）
+        assert bytes.fromhex(vector["hex"])[1:] == raw.to_bytes(2, "little"), vector["id"]
+        assert vector["expect"]["decoded"]["interval_ms"] == raw, vector["id"]
+        # normalized_interval_ms は仕様 §5.1 の適用値
+        expected_normalized = {
+            0: 1000,
+            1: 100,
+            50: 100,
+            99: 100,
+            100: 100,
+            500: 500,
+            1000: 1000,
+            60000: 60000,
+            60001: 60000,
+            65535: 60000,
+        }[raw]
+        assert (
+            vector["expect"]["decoded"]["normalized_interval_ms"]
+            == expected_normalized
+        ), vector["id"]
+
+
 # ---------------------------------------------------------------------------
 # Status ベクタ
 # ---------------------------------------------------------------------------

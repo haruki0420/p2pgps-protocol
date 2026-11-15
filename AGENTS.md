@@ -70,7 +70,7 @@ git log --all -S'<key>public_key</key>' --oneline
 
 ## 4. 公開範囲
 
-- `p2pgps-ios` は **public**（SideStore / AltStore ソース用）。他のリポジトリは private。
+- `p2pgps-ios` は **public**（SideStore / AltStore ソース用）。他のリポジトリも public です。
 - public 化する場合は、上記の個人データ確認を必須とする。
 - Release アセット（IPA / APK）にも個人データが含まれないことを確認する。
 

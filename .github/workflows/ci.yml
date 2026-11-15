@@ -3,8 +3,20 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "wiki/**"
+      - "README.md"
+      - "CHANGELOG.md"
   pull_request:
+    paths-ignore:
+      - "wiki/**"
+      - "README.md"
+      - "CHANGELOG.md"
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -30,6 +42,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
 
       - name: Install package (editable + test extra)
         run: |

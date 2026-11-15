@@ -17,7 +17,7 @@ StikDebug 由来の GPS シミュレーション機能（最小フォーク TLoc
 | `p2pgps-ios` | StikDebug / TLocation 由来コードを含むため AGPL-3.0 |
 | `p2pgps-android` | 独自実装。MIT |
 
-`p2pgps-protocol` がドキュメントと仕様のハブになります。
+`p2pgps-protocol` が通信仕様の正本です。全体の説明は [p2pgps の Wiki](https://github.com/haruki0420/p2pgps/wiki) を参照してください。
 
 ## なぜ Location Packet は 20 bytes 固定なのですか？
 

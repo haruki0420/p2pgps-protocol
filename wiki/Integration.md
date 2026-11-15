@@ -132,9 +132,9 @@ Python 実装の `LocationPacket.validate()` と `FilterDecision` が同じ順�
 手動ミラーを更新するときは次の手順を推奨する。
 
 - Swift: `Bundle.module` のリソースとして `location.json` 等を追加し、
-  `JSONDecoder` で `wire` / `hex` / `expect` を読む（導入する場合）。
+  `JSONDecoder` で `wire` / `hex` / `expect` を読む。
 - Kotlin: `src/test/resources/vectors/` に置き、`kotlinx.serialization` または
-  `org.json` で読む（導入する場合）。
+  `org.json` で読む。
 
 検証内容（3 実装共通）:
 

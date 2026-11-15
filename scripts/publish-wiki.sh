@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 # GitHub Wiki へ wiki/*.md を同期する。
 #
-# 前提: GitHub 上で対象リポジトリの Wiki を一度だけ手動で初期化しておく
-#       （Wiki の「Create the first page」→ そのまま Save）。
-#       GitHub の仕様上、空の Wiki は git push を受け付けない。
+# 前提: GitHub 上で対象リポジトリの Wiki が作成済みであること。
 #
 # 使い方:
 #   ./scripts/publish-wiki.sh
@@ -23,6 +21,12 @@ if ! git clone --quiet "https://github.com/${repo}.wiki.git" "$tmp" 2>/dev/null;
 fi
 
 cp wiki/*.md "$tmp"/
+# wiki/ から消したページは GitHub Wiki からも消す
+for f in "$tmp"/*.md; do
+  [ -e "$f" ] || continue
+  base="$(basename "$f")"
+  [ -f "wiki/$base" ] || rm -f "$f"
+done
 git -C "$tmp" add -A
 if git -C "$tmp" diff --cached --quiet; then
   echo "Wiki は最新です: https://github.com/${repo}/wiki"

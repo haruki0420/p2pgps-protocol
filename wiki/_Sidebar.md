@@ -2,9 +2,10 @@
 
 - [Home](Home)
 - [Getting Started](Getting-Started)
-- [用語集（Glossary）](https://github.com/haruki0420/p2pgps/wiki/Glossary)
 - [Protocol](Protocol)
-- [Architecture](Architecture)
 - [Testing](Testing)
+- [Integration](Integration)
+- [Architecture](Architecture)
 - [Troubleshooting](Troubleshooting)
 - [FAQ](FAQ)
+- [License](License)

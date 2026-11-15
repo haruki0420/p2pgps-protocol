@@ -114,12 +114,12 @@ Status の `interval_ms` は正規化後の値です。旧仕様（v1.0）の「
 `p2pgps-protocol` は **MIT** です。商用利用・改変・再配布が可能です（著作権表示を
 保持してください）。ただし `p2pgps-ios` は AGPL-3.0（StikDebug / TLocation 由来）です。
 詳細は
-[`docs/licensing.md`](https://github.com/haruki0420/p2pgps/blob/main/docs/licensing.md)
+[`https://github.com/haruki0420/p2pgps/wiki/License`](https://github.com/haruki0420/p2pgps/blob/main/https://github.com/haruki0420/p2pgps/wiki/License)
 （プロジェクトルート）と各リポジトリの LICENSE を参照してください。
 
 ## 実機での動作検証はしていますか？
 
-開発環境の制約により、実機 BLE の動作検証は未実施です。CI ではプロトコル層の
+実機 BLE は Android 実機 + iPad で確認済みです。CI ではプロトコル層の
 ユニットテスト・CLI・仕様整合までを保証しています。実機手順は `p2pgps-ios` の
 Wiki を参照してください。
 

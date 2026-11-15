@@ -24,7 +24,7 @@
   （3 実装が同じ JSON を読むのではなく、同じカテゴリ・値を手動でミラー。
   自動同期は Roadmap）。
 - **L-19**: macOS は未検証であることを明記（CI は Linux / Windows）。
-- **L-23**: `docs/integration.md` の Kotlin パスを実際の構成に修正。
+- **L-23**: `wiki/Integration.md` の Kotlin パスを実際の構成に修正。
 - **L-22**: `serve` の bless シミュレータが Control write を受信しないことを明記。
 - **R-4**: `RESET` は既定設定に戻すが、**ストリーミング状態は変更しない**ことを仕様 §5 に明記（iOS / Android の挙動を統一）。
 - テストを 179 → 200 に拡充（§5.1 境界値、no-fix、NaN/inf、CLI 異常系）。
@@ -36,7 +36,7 @@
 - **L-21**: `degrees_to_e7()` が NaN / inf を `ProtocolError` にする
   （CLI の traceback を解消）。
 - ドキュメント内の「範囲外 → 1000」記述を §5.1 の境界クランプに統一
-  （`docs/integration.md` / `wiki/FAQ.md` / `wiki/Protocol.md` ほか）。
+  （`wiki/Integration.md` / `wiki/FAQ.md` / `wiki/Protocol.md` ほか）。
 
 ## [1.0.0] - 2026-11-15
 
@@ -60,7 +60,7 @@
   Extended・Control 全 opcode・Status）。iOS / Android と共有可能。
 - `tests/`: pytest 179 テスト。ベクタのラウンドトリップ、境界値、異常系、
   CLI 統合、仕様書と実装定数の整合性チェック。
-- `docs/architecture.md` / `docs/testing.md` / `docs/integration.md`。
+- `wiki/Architecture.md` / `wiki/Testing.md` / `wiki/Integration.md`。
 - `wiki/`: GitHub Wiki 用 Markdown（Home / Getting-Started / Protocol /
   Architecture / Testing / Troubleshooting / FAQ）。
 - `.github/workflows/ci.yml`: ubuntu-latest + windows-latest、Python 3.12、
@@ -78,4 +78,4 @@
 - v1 仕様は 2026-11-15 にフリーズ。変更する場合は 3 リポジトリ
   （`p2pgps-protocol` / `p2pgps-ios` / `p2pgps-android`）を同時に更新し、
   本 CHANGELOG と `spec/protocol-v1.md` の変更履歴に記録すること。
-- 実機 BLE の動作検証は未実施（CI はプロトコル層のユニットテストまで）。
+- 実機 BLE は Android 実機 + iPad で確認済み（CI はプロトコル層のユニットテストまで）。

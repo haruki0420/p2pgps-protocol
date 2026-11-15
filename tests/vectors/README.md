@@ -145,7 +145,7 @@ python -m pytest                  # テストスイート（ベクタ検証を�
    `normalized_interval_ms` が仕様 §5.1 の適用値であることを確認する。
 
 実装間のフィールド名対応は
-[`docs/integration.md`](../../docs/integration.md) を参照してください。
+[`wiki/Integration.md`](../../wiki/Integration.md) を参照してください。
 
 ## ベクタを追加するとき
 

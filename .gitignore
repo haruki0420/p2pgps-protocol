@@ -28,3 +28,37 @@ desktop.ini
 
 # ローカル検証用
 *.log
+
+# Secrets / signing
+*.mobiledevicepairing
+*.mobiledevicepair
+pairingFile.plist
+*.p12
+*.p8
+*.mobileprovision
+*.ipa
+*.apk
+.env
+.env.*
+!.env.example
+
+# Work / reports / temporary
+*.bak
+*.orig
+*~
+*.tmp
+*.swp
+screenshots/
+reports/
+notes/
+work/
+tmp/
+scratch/
+drafts/
+*.gpx
+*.geojson
+*.csv
+
+# Repo-specific
+.tox/
+.nox/

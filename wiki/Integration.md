@@ -12,7 +12,7 @@
 | Kotlin | `p2pgps-android/app/src/main/java/jp/haruki0420/p2pgps/protocol/` | Android Sender の encode、Status / Control の処理 | JUnit（ベクタ値は手動ミラー） |
 
 **正本は `spec/protocol-v1.md`**。実装間で解釈が割れた場合は仕様書の表を優先し、
-必要なら 3 リポジトリ同時に修正する。
+必要なら 3 つの実装リポジトリを同時に修正する。
 
 > 現状、`tests/vectors/*.json` を Swift / Kotlin のテストが直接読む仕組みは未実装で、
 > 同じカテゴリ・同じ値を手動でミラーしている。自動同期は Roadmap（§10）。

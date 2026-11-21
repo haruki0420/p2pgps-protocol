@@ -34,7 +34,7 @@ python -m p2pgps vectors
 ## 3. テストベクタ
 
 `tests/vectors/*.json` が 3 実装の共通契約データ。スキーマ・各ファイルの内容・
-Swift / Kotlin からの読み方は [`tests/vectors/README.md`](../tests/vectors/README.md) を参照。
+Swift / Kotlin からの読み方は [`tests/vectors/README.md`](https://github.com/haruki0420/p2pgps-protocol/blob/main/tests/vectors/README.md) を参照。
 現状は各実装が同じカテゴリ・同じ値を手動でミラーしており、JSON を直接読む自動同期は
 未実装（Roadmap。`wiki/Architecture.md` §6.1）。
 

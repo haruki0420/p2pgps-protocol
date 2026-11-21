@@ -7,13 +7,14 @@ iPhone / Android が取得した GPS 位置情報を BLE で iPad に送り、iP
 位置情報はクラウドを経由せず、端末間の P2P のみで完結します。iPad 側の位置固定は
 StikDebug 由来の GPS シミュレーション機能（最小フォーク TLocation）を流用しています。
 
-## なぜ 3 つのリポジトリに分かれているのですか？
+## なぜ 4 つのリポジトリに分かれているのですか？
 
-役割とライセンスが異なるためです。
+3 つの実装リポジトリ（iOS / Android / protocol）＋ハブ（p2pgps）に分かれています。役割とライセンスが異なるためです。
 
 | リポジトリ | 理由 |
 | :--- | :--- |
-| `p2pgps-protocol` | 仕様・テストベクタは 3 実装の共通契約。MIT |
+| `p2pgps` | 全体の説明・セットアップ手順を置くハブ。MIT |
+| `p2pgps-protocol` | 仕様・テストベクタは 3 つの実装の共通契約。MIT |
 | `p2pgps-ios` | StikDebug / TLocation 由来コードを含むため AGPL-3.0 |
 | `p2pgps-android` | 独自実装。MIT |
 
@@ -74,12 +75,12 @@ iOS / Android アプリのプロトコル層は Swift / Kotlin で実装しま�
 
 ## iOS / Android と仕様の整合はどう保っていますか？
 
-1. 正本仕様 `spec/protocol-v1.md` を 3 リポジトリで共有
+1. 正本仕様 `spec/protocol-v1.md` を 3 つの実装リポジトリ（iOS / Android / protocol）で共有
 2. 共通テストベクタ `tests/vectors/*.json` と同じカテゴリ・値を各実装のテストで
    手動ミラー（JSON を直接読む自動同期は未実装・Roadmap）
 3. このリポジトリの CI で「仕様書と実装定数の整合性」を検証
 
-仕様を変更する場合は 3 リポジトリを同時に更新し、CHANGELOG と仕様の変更履歴に
+仕様を変更する場合は 3 つの実装リポジトリを同時に更新し、CHANGELOG と仕様の変更履歴に
 記録します。
 
 ## テストベクタはどう使えばいいですか？
@@ -119,7 +120,7 @@ Status の `interval_ms` は正規化後の値です。旧仕様（v1.0）の「
 
 ## 実機での動作検証はしていますか？
 
-実機 BLE は Android 実機 + iPad で確認済みです。CI ではプロトコル層の
+実機 BLE の確認範囲はハブ Wiki の [Status](https://github.com/haruki0420/p2pgps/wiki/Status) を参照してください。CI ではプロトコル層の
 ユニットテスト・CLI・仕様整合までを保証しています。実機手順は `p2pgps-ios` の
 Wiki を参照してください。
 
@@ -134,7 +135,7 @@ Wiki を参照してください。
 
 ## コントリビュートするには？
 
-1. 仕様変更を伴う場合は、まず Issue で 3 リポジトリへの影響を相談してください。
+1. 仕様変更を伴う場合は、まず Issue で 3 つの実装リポジトリへの影響を相談してください。
 2. テストベクタを追加する場合は、期待 hex を独立実装で検算してください。
 3. `python -m pytest -q` と `python -m p2pgps vectors` を通してください。
 4. CI（Ubuntu / Windows）が緑になることを確認してください。

@@ -75,7 +75,7 @@
 
 ### Notes
 
-- v1 仕様は 2026-11-15 にフリーズ。変更する場合は 3 リポジトリ
+- v1 仕様は 2026-11-15 にフリーズ。変更する場合は 3 つの実装リポジトリ
   （`p2pgps-protocol` / `p2pgps-ios` / `p2pgps-android`）を同時に更新し、
   本 CHANGELOG と `spec/protocol-v1.md` の変更履歴に記録すること。
-- 実機 BLE は Android 実機 + iPad で確認済み（CI はプロトコル層のユニットテストまで）。
+- 実機 BLE の確認範囲はハブ Wiki の [Status](https://github.com/haruki0420/p2pgps/wiki/Status) を参照。
